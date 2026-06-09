@@ -248,7 +248,7 @@ def _extract_constraint_lines(statement: str) -> list[str]:
     lines = []
     for line in statement.splitlines():
         lowered = line.lower()
-        if "constraint" in lowered or "<=" in line or "≤" in line:
+        if "constraint" in lowered or "<=" in line or "\u2264" in line:
             compact = line.strip()
             if compact:
                 lines.append(compact)

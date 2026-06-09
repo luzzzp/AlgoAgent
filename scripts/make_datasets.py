@@ -85,7 +85,8 @@ def _complexity_fields(bundle: ProblemBundle) -> tuple[str, str]:
 
 
 def _labeled_complexity(text: str, label: str) -> str:
-    match = re.search(rf"{label}\s*[:：]\s*(O\s*\([^)]+\)|unknown)", text, flags=re.I)
+    normalized = text.replace("\uff1a", ":")
+    match = re.search(rf"{label}\s*:\s*(O\s*\([^)]+\)|unknown)", normalized, flags=re.I)
     return match.group(1) if match else "unknown"
 
 
