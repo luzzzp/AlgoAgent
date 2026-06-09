@@ -12,8 +12,10 @@ class HuggingFaceModel:
     def __init__(
         self,
         model_name_or_path: str,
+        adapter_path: str = "",
         max_new_tokens: int = 2048,
         temperature: float = 0.2,
+        load_in_4bit: bool = False,
     ):
         try:
             import torch
@@ -26,14 +28,33 @@ class HuggingFaceModel:
 
         self.torch = torch
         self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path, trust_remote_code=True)
+        model_kwargs = {
+            "torch_dtype": "auto",
+            "device_map": "auto",
+            "trust_remote_code": True,
+        }
+        if load_in_4bit:
+            try:
+                from transformers import BitsAndBytesConfig
+            except ImportError as exc:
+                raise RuntimeError("4-bit loading requires bitsandbytes and a recent transformers build.") from exc
+            model_kwargs["quantization_config"] = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_quant_type="nf4",
+            )
         self.model = AutoModelForCausalLM.from_pretrained(
             model_name_or_path,
-            torch_dtype="auto",
-            device_map="auto",
-            trust_remote_code=True,
+            **model_kwargs,
         )
+        if adapter_path:
+            try:
+                from peft import PeftModel
+            except ImportError as exc:
+                raise RuntimeError("Loading a LoRA adapter requires peft. Install requirements-train.txt.") from exc
+            self.model = PeftModel.from_pretrained(self.model, adapter_path)
         self.max_new_tokens = max_new_tokens
         self.temperature = temperature
+        self.model.eval()
 
     def generate_solution(
         self,
@@ -84,14 +105,16 @@ class HuggingFaceModel:
         else:
             text = "\n\n".join(f"{item['role']}: {item['content']}" for item in messages) + "\nassistant:"
         inputs = self.tokenizer([text], return_tensors="pt").to(self.model.device)
+        generate_kwargs = {
+            **inputs,
+            "max_new_tokens": self.max_new_tokens,
+            "do_sample": self.temperature > 0,
+            "pad_token_id": self.tokenizer.eos_token_id,
+        }
+        if self.temperature > 0:
+            generate_kwargs["temperature"] = self.temperature
         with self.torch.no_grad():
-            output_ids = self.model.generate(
-                **inputs,
-                max_new_tokens=self.max_new_tokens,
-                do_sample=self.temperature > 0,
-                temperature=self.temperature,
-                pad_token_id=self.tokenizer.eos_token_id,
-            )
+            output_ids = self.model.generate(**generate_kwargs)
         generated = output_ids[0][inputs.input_ids.shape[-1] :]
         return self.tokenizer.decode(generated, skip_special_tokens=True)
 
@@ -108,4 +131,3 @@ def _extract_complexity(text: str, kind: str) -> str:
     pattern = rf"{kind}\s+complexity\s*:\s*(o\s*\([^)]+\))"
     match = re.search(pattern, text, re.I)
     return match.group(1) if match else "unknown"
-

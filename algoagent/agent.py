@@ -24,11 +24,13 @@ class AlgoAgent:
         executor: CppExecutor | None = None,
         checker: ComplexityFeasibilityChecker | None = None,
         max_repair_turns: int = 3,
+        explain_on_success: bool = True,
     ):
         self.model = model
         self.executor = executor or CppExecutor()
         self.checker = checker or ComplexityFeasibilityChecker()
         self.max_repair_turns = max_repair_turns
+        self.explain_on_success = explain_on_success
 
     def solve(self, problem: ProblemSpec, tests: TestSuite) -> AgentResult:
         traces = [
@@ -119,7 +121,11 @@ class AlgoAgent:
                 )
 
             traces.append(AgentTrace(attempt, "held_out_tests", "All held-out tests passed."))
-            explanation = self.model.explain_solution(problem, response.code, complexity).strip()
+            explanation = (
+                self.model.explain_solution(problem, response.code, complexity).strip()
+                if self.explain_on_success
+                else ""
+            )
             return AgentResult(
                 problem_id=problem.id,
                 status=AgentStatus.SOLVED,
