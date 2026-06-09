@@ -1,0 +1,41 @@
+{
+  "problem": {
+    "id": "balanced_parentheses",
+    "title": "Balanced Parentheses",
+    "statement": "Given a string consisting only of '(' and ')', determine whether it is a valid balanced parentheses sequence.",
+    "input_format": "A single line contains string s.",
+    "output_format": "Print YES if the sequence is balanced, otherwise print NO.",
+    "constraints": [
+      "1 <= n <= 200000, where n is the length of s"
+    ],
+    "language": "cpp17",
+    "time_limit_sec": 2,
+    "memory_limit_mb": 256
+  },
+  "tests": {
+    "repair_tests": [
+      {
+        "stdin": "(()())\n",
+        "expected_stdout": "YES\n"
+      },
+      {
+        "stdin": "())(\n",
+        "expected_stdout": "NO\n"
+      }
+    ],
+    "eval_tests": [
+      {
+        "stdin": "(\n",
+        "expected_stdout": "NO\n"
+      }
+    ]
+  },
+  "oracle": {
+    "difficulty": "easy",
+    "tags": ["stack"],
+    "expected_complexity": "O(n) time, O(1) space",
+    "reference_solution": "#include <bits/stdc++.h>\nusing namespace std;\nint main() {\n    string s;\n    if (!(cin >> s)) return 0;\n    int balance = 0;\n    for (char c : s) {\n        balance += c == '(' ? 1 : -1;\n        if (balance < 0) {\n            cout << \"NO\\n\";\n            return 0;\n        }\n    }\n    cout << (balance == 0 ? \"YES\" : \"NO\") << '\\n';\n}\n",
+    "source": "local-demo"
+  }
+}
+

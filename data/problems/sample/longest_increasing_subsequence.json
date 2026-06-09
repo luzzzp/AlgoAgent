@@ -1,0 +1,42 @@
+{
+  "problem": {
+    "id": "longest_increasing_subsequence",
+    "title": "Longest Increasing Subsequence Length",
+    "statement": "Given an array of n integers, output the length of the longest strictly increasing subsequence.",
+    "input_format": "The first line contains n. The second line contains n integers.",
+    "output_format": "Print one integer: the LIS length.",
+    "constraints": [
+      "1 <= n <= 200000",
+      "-1000000000 <= ai <= 1000000000"
+    ],
+    "language": "cpp17",
+    "time_limit_sec": 2,
+    "memory_limit_mb": 256
+  },
+  "tests": {
+    "repair_tests": [
+      {
+        "stdin": "6\n10 9 2 5 3 7\n",
+        "expected_stdout": "3\n"
+      },
+      {
+        "stdin": "5\n5 4 3 2 1\n",
+        "expected_stdout": "1\n"
+      }
+    ],
+    "eval_tests": [
+      {
+        "stdin": "7\n1 2 2 2 3 4 4\n",
+        "expected_stdout": "4\n"
+      }
+    ]
+  },
+  "oracle": {
+    "difficulty": "medium",
+    "tags": ["dynamic-programming", "binary-search"],
+    "expected_complexity": "O(n log n) time, O(n) space",
+    "reference_solution": "#include <bits/stdc++.h>\nusing namespace std;\nint main() {\n    ios::sync_with_stdio(false);\n    cin.tie(nullptr);\n    int n;\n    if (!(cin >> n)) return 0;\n    vector<long long> tails;\n    for (int i = 0; i < n; ++i) {\n        long long x; cin >> x;\n        auto it = lower_bound(tails.begin(), tails.end(), x);\n        if (it == tails.end()) tails.push_back(x);\n        else *it = x;\n    }\n    cout << tails.size() << '\\n';\n}\n",
+    "source": "local-demo"
+  }
+}
+

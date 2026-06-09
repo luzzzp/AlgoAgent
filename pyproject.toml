@@ -1,0 +1,13 @@
+[project]
+name = "algoagent"
+version = "0.1.0"
+description = "Algorithm coding agent with post-training and executable evaluation harness."
+requires-python = ">=3.10"
+dependencies = []
+
+[tool.setuptools.packages.find]
+include = ["algoagent*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+

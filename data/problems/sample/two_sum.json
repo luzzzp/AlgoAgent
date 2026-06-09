@@ -1,0 +1,42 @@
+{
+  "problem": {
+    "id": "two_sum",
+    "title": "Two Sum Indices",
+    "statement": "Given n integers and a target value, output two distinct zero-based indices whose values sum to the target. Every test with a valid pair has exactly one valid answer. If no pair exists, output -1 -1.",
+    "input_format": "The first line contains n and target. The second line contains n integers.",
+    "output_format": "Print two zero-based indices i and j separated by a space, or -1 -1.",
+    "constraints": [
+      "1 <= n <= 200000",
+      "-1000000000 <= ai, target <= 1000000000"
+    ],
+    "language": "cpp17",
+    "time_limit_sec": 2,
+    "memory_limit_mb": 256
+  },
+  "tests": {
+    "repair_tests": [
+      {
+        "stdin": "4 9\n2 7 11 15\n",
+        "expected_stdout": "0 1\n"
+      },
+      {
+        "stdin": "5 6\n10 4 8 2 5\n",
+        "expected_stdout": "1 3\n"
+      }
+    ],
+    "eval_tests": [
+      {
+        "stdin": "3 100\n1 2 3\n",
+        "expected_stdout": "-1 -1\n"
+      }
+    ]
+  },
+  "oracle": {
+    "difficulty": "easy",
+    "tags": ["hash-table"],
+    "expected_complexity": "O(n) time, O(n) space",
+    "reference_solution": "#include <bits/stdc++.h>\nusing namespace std;\nint main() {\n    ios::sync_with_stdio(false);\n    cin.tie(nullptr);\n    int n; long long target;\n    if (!(cin >> n >> target)) return 0;\n    vector<long long> a(n);\n    for (auto &x : a) cin >> x;\n    unordered_map<long long, int> seen;\n    for (int i = 0; i < n; ++i) {\n        long long need = target - a[i];\n        auto it = seen.find(need);\n        if (it != seen.end()) {\n            cout << it->second << ' ' << i << '\\n';\n            return 0;\n        }\n        if (!seen.count(a[i])) seen[a[i]] = i;\n    }\n    cout << \"-1 -1\\n\";\n    return 0;\n}\n",
+    "source": "local-demo"
+  }
+}
+
