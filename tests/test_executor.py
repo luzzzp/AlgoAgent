@@ -35,6 +35,23 @@ int main() {
     def test_normalize_output_accepts_bytes(self) -> None:
         self.assertEqual(normalize_output(b"hello\r\nworld\n\n"), "hello\nworld")
 
+    def test_invalid_utf8_output_is_wrong_answer_not_crash(self) -> None:
+        code = """#include <bits/stdc++.h>
+using namespace std;
+int main() {
+    cout << static_cast<char>(0xaf);
+    return 0;
+}
+"""
+        result = CppExecutor().evaluate(
+            code,
+            [TestCase(id="binary", stdin="", expected_stdout="")],
+            suite_name="repair",
+        )
+        self.assertTrue(result.compiled)
+        self.assertFalse(result.all_passed)
+        self.assertFalse(result.tests[0].passed)
+
 
 if __name__ == "__main__":
     unittest.main()
