@@ -262,7 +262,9 @@ def _cases_from_dict(payloads: list[dict[str, Any]], prefix: str) -> list[TestCa
     return cases
 
 
-def normalize_output(text: str) -> str:
+def normalize_output(text: str | bytes) -> str:
+    if isinstance(text, bytes):
+        text = text.decode("utf-8", errors="replace")
     lines = [line.rstrip() for line in text.replace("\r\n", "\n").replace("\r", "\n").split("\n")]
     while lines and lines[-1] == "":
         lines.pop()

@@ -3,7 +3,7 @@ from __future__ import annotations
 import unittest
 
 from algoagent.executor import CppExecutor
-from algoagent.schema import TestCase
+from algoagent.schema import TestCase, normalize_output
 
 
 class CppExecutorTest(unittest.TestCase):
@@ -32,7 +32,9 @@ int main() {
         self.assertFalse(result.compiled)
         self.assertIn("error", result.compile_error.lower())
 
+    def test_normalize_output_accepts_bytes(self) -> None:
+        self.assertEqual(normalize_output(b"hello\r\nworld\n\n"), "hello\nworld")
+
 
 if __name__ == "__main__":
     unittest.main()
-
