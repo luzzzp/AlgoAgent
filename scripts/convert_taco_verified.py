@@ -20,6 +20,7 @@ def main() -> None:
     parser.add_argument("--dataset", default=DEFAULT_DATASET)
     parser.add_argument("--split", default="train")
     parser.add_argument("--out-dir", default="data/problems/taco_verified")
+    parser.add_argument("--offset", type=int, default=0, help="Skip this many dataset rows before conversion.")
     parser.add_argument("--limit", type=int, default=0, help="Convert at most this many usable rows; 0 means no limit.")
     parser.add_argument("--repair-ratio", type=float, default=0.7)
     parser.add_argument("--min-tests", type=int, default=2)
@@ -44,6 +45,8 @@ def main() -> None:
     written = 0
     skipped = {"function_task": 0, "bad_tests": 0, "no_solution": 0, "conversion_error": 0}
     for index, row in enumerate(dataset):
+        if index < args.offset:
+            continue
         if args.limit and written >= args.limit:
             break
         try:
@@ -70,6 +73,7 @@ def main() -> None:
     manifest = {
         "dataset": args.dataset,
         "split": args.split,
+        "offset": args.offset,
         "written": written,
         "skipped": skipped,
         "target_language": args.target_language,

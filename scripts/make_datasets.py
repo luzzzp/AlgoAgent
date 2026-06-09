@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import re
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -30,7 +31,13 @@ def main() -> None:
 
 def _sft_record(bundle: ProblemBundle) -> dict[str, str]:
     return {
-        "instruction": "Solve the algorithm problem using C++17 within the stated resource limits.",
+        "instruction": (
+            "Solve the algorithm problem using C++17 within the stated resource limits. "
+            "Use this exact response structure:\n"
+            "Time Complexity: O(...)\n"
+            "Space Complexity: O(...)\n"
+            "```cpp\n...\n```"
+        ),
         "input": bundle.spec.prompt(),
         "output": _format_answer(bundle),
     }
@@ -43,7 +50,7 @@ def _dpo_record(bundle: ProblemBundle) -> dict[str, str]:
         "rejected": (
             "Time Complexity: unknown\n"
             "Space Complexity: unknown\n"
-            "Code:\n```cpp\n#include <bits/stdc++.h>\nusing namespace std;\nint main(){return 0;}\n```"
+            "```cpp\n#include <bits/stdc++.h>\nusing namespace std;\nint main(){return 0;}\n```"
         ),
     }
 
@@ -57,12 +64,29 @@ def _grpo_record(bundle: ProblemBundle) -> dict[str, str]:
 
 
 def _format_answer(bundle: ProblemBundle) -> str:
-    oracle = bundle.oracle
+    time_complexity, space_complexity = _complexity_fields(bundle)
     return (
-        f"Algorithm tags: {', '.join(oracle.tags) or 'not provided'}\n"
-        f"Time and space complexity: {oracle.expected_complexity}\n"
-        f"Code:\n```cpp\n{_cpp_solution(bundle)}\n```"
+        f"Time Complexity: {time_complexity}\n"
+        f"Space Complexity: {space_complexity}\n"
+        f"```cpp\n{_cpp_solution(bundle)}\n```"
     )
+
+
+def _complexity_fields(bundle: ProblemBundle) -> tuple[str, str]:
+    text = bundle.oracle.expected_complexity.strip()
+    time_complexity = _labeled_complexity(text, "time")
+    space_complexity = _labeled_complexity(text, "space")
+    complexities = re.findall(r"O\s*\([^)]+\)", text, flags=re.I)
+    if time_complexity == "unknown" and complexities:
+        time_complexity = complexities[0]
+    if space_complexity == "unknown" and len(complexities) >= 2:
+        space_complexity = complexities[1]
+    return time_complexity, space_complexity
+
+
+def _labeled_complexity(text: str, label: str) -> str:
+    match = re.search(rf"{label}\s*[:：]\s*(O\s*\([^)]+\)|unknown)", text, flags=re.I)
+    return match.group(1) if match else "unknown"
 
 
 def _cpp_solution(bundle: ProblemBundle) -> str:
