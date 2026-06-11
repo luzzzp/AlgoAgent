@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import unittest
 
-from training.sft_train import _build_sft_config, _build_sft_trainer_kwargs
+from algoagent.hf_model import ALGOAGENT_SYSTEM_PROMPT
+from training.sft_train import _build_sft_config, _build_sft_trainer_kwargs, _format_sft
 from training.dpo_train import _build_dpo_config, _build_dpo_trainer_kwargs
 
 
@@ -37,6 +38,20 @@ class TrainingCompatTest(unittest.TestCase):
 
         self.assertEqual(kwargs["processing_class"], "tokenizer")
         self.assertNotIn("tokenizer", kwargs)
+
+    def test_sft_text_includes_system_prompt(self) -> None:
+        text = _format_sft(
+            {
+                "instruction": "Solve.",
+                "input": "Problem statement.",
+                "output": "Solution Explanation:\n中文解释\n\nTime Complexity: O(n)\nSpace Complexity: O(1)\n```cpp\nint main(){return 0;}\n```",
+            }
+        )
+
+        self.assertIn("<|im_start|>system", text)
+        self.assertIn(ALGOAGENT_SYSTEM_PROMPT, text)
+        self.assertIn("Solution Explanation section must be written in Chinese", text)
+        self.assertLess(text.index("<|im_start|>system"), text.index("<|im_start|>user"))
 
     def test_dpo_config_adds_beta_when_supported(self) -> None:
         class DPOConfigWithBeta:

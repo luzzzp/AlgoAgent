@@ -6,6 +6,13 @@ from algoagent.model_client import ModelResponse
 from algoagent.schema import ComplexityEstimate, ProblemSpec
 
 
+ALGOAGENT_SYSTEM_PROMPT = (
+    "You are AlgoAgent, a competitive programming assistant. "
+    "Always answer with the required structured format. "
+    "The Solution Explanation section must be written in Chinese."
+)
+
+
 class HuggingFaceModel:
     """Optional local Transformers backend for base or post-trained models."""
 
@@ -75,7 +82,8 @@ class HuggingFaceModel:
         if feedback:
             prompt += f"\nPrevious attempt feedback:\n{feedback[:4000]}\n"
         completion = self._generate(
-            "You are AlgoAgent. Independently choose an algorithm that satisfies the stated limits.",
+            ALGOAGENT_SYSTEM_PROMPT
+            + " Independently choose an algorithm that satisfies the stated limits.",
             prompt,
         )
         return ModelResponse(

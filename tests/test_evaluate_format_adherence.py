@@ -43,6 +43,26 @@ int main(){return 0;}
         self.assertTrue(format_eval.has_explanation_field(text))
         self.assertFalse(format_eval.has_chinese_explanation(text))
 
+    def test_accepts_markdown_headings_without_colons(self) -> None:
+        text = """### Solution Explanation
+
+题目要求根据规则推导答案，可以先分析输入规模，再选择合适的模拟或数学方法。
+
+### Time Complexity
+- 总时间复杂度为 O(n log n)。
+
+### Space Complexity
+- 额外空间复杂度为 O(n)。
+
+```cpp
+int main(){return 0;}
+```
+"""
+        self.assertTrue(format_eval.has_explanation_field(text))
+        self.assertTrue(format_eval.has_chinese_explanation(text))
+        self.assertTrue(format_eval.has_complexity_fields(text))
+        self.assertTrue(format_eval.has_cpp_code_block(text))
+
     def test_summarizes_format_rates(self) -> None:
         summary = format_eval.summarize(
             [

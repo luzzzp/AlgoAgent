@@ -3,6 +3,8 @@ from __future__ import annotations
 import argparse
 import inspect
 
+from algoagent.hf_model import ALGOAGENT_SYSTEM_PROMPT
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="QLoRA SFT entrypoint for AlgoAgent.")
@@ -99,7 +101,11 @@ def _build_sft_trainer_kwargs(
 
 
 def _format_sft(row: dict[str, str]) -> str:
-    return f"<|im_start|>user\n{row['instruction']}\n{row['input']}<|im_end|>\n<|im_start|>assistant\n{row['output']}<|im_end|>"
+    return (
+        f"<|im_start|>system\n{ALGOAGENT_SYSTEM_PROMPT}<|im_end|>\n"
+        f"<|im_start|>user\n{row['instruction']}\n{row['input']}<|im_end|>\n"
+        f"<|im_start|>assistant\n{row['output']}<|im_end|>"
+    )
 
 
 if __name__ == "__main__":

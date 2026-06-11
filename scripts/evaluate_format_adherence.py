@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from algoagent.hf_model import HuggingFaceModel
+from algoagent.hf_model import ALGOAGENT_SYSTEM_PROMPT, HuggingFaceModel
 from algoagent.schema import ProblemBundle, load_problems
 
 
@@ -85,7 +85,7 @@ def generate_format_response(model: HuggingFaceModel, bundle: ProblemBundle) -> 
         "```"
     )
     return model._generate(
-        "You are AlgoAgent. Return a structured competitive programming solution.",
+        ALGOAGENT_SYSTEM_PROMPT,
         prompt,
     )
 
@@ -117,28 +117,39 @@ def summarize(results: list[dict[str, Any]]) -> dict[str, float | int]:
 
 
 def has_explanation_field(text: str) -> bool:
-    return bool(re.search(r"solution\s+explanation\s*:", text, flags=re.I))
+    return bool(_find_section_heading(text, "solution\\s+explanation"))
 
 
 def has_chinese_explanation(text: str) -> bool:
-    match = re.search(
-        r"solution\s+explanation\s*:\s*(.*?)(?:time\s+complexity\s*:|$)",
-        text,
-        flags=re.I | re.S,
-    )
-    if not match:
+    section = _find_section_heading(text, "solution\\s+explanation")
+    if not section:
         return False
-    return bool(re.search(r"[\u4e00-\u9fff]", match.group(1)))
+    _, explanation_start = section
+    next_section = _find_section_heading(text, "time\\s+complexity", start=explanation_start)
+    explanation_end = next_section[0] if next_section else len(text)
+    explanation = text[explanation_start:explanation_end]
+    return bool(re.search(r"[\u4e00-\u9fff]", explanation))
 
 
 def has_complexity_fields(text: str) -> bool:
-    return bool(re.search(r"time\s+complexity\s*:", text, flags=re.I)) and bool(
-        re.search(r"space\s+complexity\s*:", text, flags=re.I)
+    return bool(_find_section_heading(text, "time\\s+complexity")) and bool(
+        _find_section_heading(text, "space\\s+complexity")
     )
 
 
 def has_cpp_code_block(text: str) -> bool:
     return bool(re.search(r"```(?:cpp|c\+\+)\s*.*?```", text, flags=re.I | re.S))
+
+
+def _find_section_heading(text: str, label_pattern: str, start: int = 0) -> tuple[int, int] | None:
+    match = re.search(
+        rf"(?:^|\n)\s*(?:#{{1,6}}\s*)?{label_pattern}\s*:?\s*",
+        text[start:],
+        flags=re.I,
+    )
+    if not match:
+        return None
+    return match.start() + start, match.end() + start
 
 
 def rate(values) -> float:
