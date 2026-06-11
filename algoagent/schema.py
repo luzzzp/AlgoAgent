@@ -169,6 +169,7 @@ class AttemptRecord:
     complexity: ComplexityEstimate
     resource_verdict: ResourceVerdict
     repair_result: CandidateResult | None = None
+    generated_code: str | None = None
 
 
 @dataclass(frozen=True)

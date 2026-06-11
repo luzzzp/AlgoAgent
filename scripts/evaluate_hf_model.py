@@ -30,6 +30,7 @@ def main() -> None:
     parser.add_argument("--load-in-4bit", action="store_true")
     parser.add_argument("--skip-explanations", action="store_true")
     parser.add_argument("--resume", action="store_true", help="Skip problem ids already present in --out.")
+    parser.add_argument("--save-failed-code", action="store_true", help="Store generated attempt code for offline DPO data construction.")
     parser.add_argument("--compiler", default="g++")
     args = parser.parse_args()
 
@@ -49,6 +50,7 @@ def main() -> None:
         executor=CppExecutor(compiler=args.compiler),
         max_repair_turns=args.max_repair_turns,
         explain_on_success=not args.skip_explanations,
+        capture_attempt_code=args.save_failed_code,
     )
 
     metadata = {
@@ -63,6 +65,7 @@ def main() -> None:
         "skip_explanations": args.skip_explanations,
         "compiler": args.compiler,
         "resume": args.resume,
+        "save_failed_code": args.save_failed_code,
     }
     results: list[AgentResult] = []
     out_path = Path(args.out)

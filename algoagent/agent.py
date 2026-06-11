@@ -25,12 +25,14 @@ class AlgoAgent:
         checker: ComplexityFeasibilityChecker | None = None,
         max_repair_turns: int = 3,
         explain_on_success: bool = True,
+        capture_attempt_code: bool = False,
     ):
         self.model = model
         self.executor = executor or CppExecutor()
         self.checker = checker or ComplexityFeasibilityChecker()
         self.max_repair_turns = max_repair_turns
         self.explain_on_success = explain_on_success
+        self.capture_attempt_code = capture_attempt_code
 
     def solve(self, problem: ProblemSpec, tests: TestSuite) -> AgentResult:
         traces = [
@@ -77,7 +79,15 @@ class AlgoAgent:
             last_verdict = verdict
             traces.append(AgentTrace(attempt, "resource_check", _format_verdict(verdict)))
             if verdict.failed:
-                records.append(AttemptRecord(attempt, complexity, verdict, None))
+                records.append(
+                    AttemptRecord(
+                        attempt,
+                        complexity,
+                        verdict,
+                        None,
+                        self._captured_code(response.code),
+                    )
+                )
                 last_diagnostic = "\n".join(verdict.reasons)
                 feedback = last_diagnostic
                 continue
@@ -88,7 +98,15 @@ class AlgoAgent:
                 default_timeout_sec=problem.time_limit_sec,
                 suite_name="repair",
             )
-            records.append(AttemptRecord(attempt, complexity, verdict, repair_result))
+            records.append(
+                AttemptRecord(
+                    attempt,
+                    complexity,
+                    verdict,
+                    repair_result,
+                    self._captured_code(response.code),
+                )
+            )
             if not repair_result.all_passed:
                 feedback = self._repair_feedback(repair_result, tests)
                 last_diagnostic = feedback
@@ -151,6 +169,9 @@ class AlgoAgent:
             last_diagnostic or "Maximum repair turns reached.",
             last_complexity,
         )
+
+    def _captured_code(self, code: str) -> str | None:
+        return code if self.capture_attempt_code else None
 
     def _repair_feedback(self, result: CandidateResult, tests: TestSuite) -> str:
         if not result.compiled:

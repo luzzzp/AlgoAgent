@@ -107,6 +107,18 @@ class AgentReliabilityTest(unittest.TestCase):
         self.assertIsNone(result.code)
         self.assertIsNone(result.explanation)
         self.assertEqual(model.generate_calls, 2)
+        self.assertIsNone(result.attempt_records[-1].generated_code)
+
+    def test_failed_attempt_code_is_captured_only_when_requested(self) -> None:
+        model = FixedModel(PASS_TWO)
+        tests = TestSuite(
+            repair_tests=[TestCase(stdin="", expected_stdout="1\n", id="repair-0001")],
+            eval_tests=[TestCase(stdin="", expected_stdout="1\n", id="eval-0001")],
+        )
+        result = AlgoAgent(model, max_repair_turns=0, capture_attempt_code=True).solve(self.problem, tests)
+        self.assertEqual(result.status, AgentStatus.FAILED)
+        self.assertIsNone(result.code)
+        self.assertEqual(result.attempt_records[-1].generated_code, PASS_TWO)
 
     def test_theoretical_tle_triggers_replanning_before_execution(self) -> None:
         problem = ProblemSpec(
