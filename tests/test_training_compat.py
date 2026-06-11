@@ -3,6 +3,7 @@ from __future__ import annotations
 import unittest
 
 from training.sft_train import _build_sft_config, _build_sft_trainer_kwargs
+from training.dpo_train import _build_dpo_config, _build_dpo_trainer_kwargs
 
 
 class TrainingCompatTest(unittest.TestCase):
@@ -36,6 +37,35 @@ class TrainingCompatTest(unittest.TestCase):
 
         self.assertEqual(kwargs["processing_class"], "tokenizer")
         self.assertNotIn("tokenizer", kwargs)
+
+    def test_dpo_config_adds_beta_when_supported(self) -> None:
+        class DPOConfigWithBeta:
+            def __init__(self, output_dir: str, beta: float, **kwargs):
+                self.output_dir = output_dir
+                self.beta = beta
+                self.kwargs = kwargs
+
+        config = _build_dpo_config(DPOConfigWithBeta, "outputs/dpo")
+
+        self.assertEqual(config.output_dir, "outputs/dpo")
+        self.assertEqual(config.beta, 0.1)
+
+    def test_dpo_trainer_omits_peft_config_for_existing_adapter(self) -> None:
+        class NewDPOTrainer:
+            def __init__(self, model, args, train_dataset, processing_class):
+                pass
+
+        kwargs = _build_dpo_trainer_kwargs(
+            NewDPOTrainer,
+            model="model",
+            training_args="args",
+            dataset="dataset",
+            tokenizer="tokenizer",
+            peft_config=None,
+        )
+
+        self.assertEqual(kwargs["processing_class"], "tokenizer")
+        self.assertNotIn("peft_config", kwargs)
 
 
 if __name__ == "__main__":

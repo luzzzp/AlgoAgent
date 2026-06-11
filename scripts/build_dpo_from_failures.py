@@ -129,6 +129,8 @@ def _format_rejected(problem: dict[str, Any], code: str) -> str:
     time_complexity = complexity.get("time_complexity") or "unknown"
     space_complexity = complexity.get("space_complexity") or "unknown"
     return (
+        "Solution Explanation:\n"
+        "The attempted solution failed validation and should not be preferred.\n\n"
         f"Time Complexity: {time_complexity}\n"
         f"Space Complexity: {space_complexity}\n"
         f"```cpp\n{code.strip()}\n```"

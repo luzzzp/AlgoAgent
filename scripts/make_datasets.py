@@ -34,6 +34,8 @@ def _sft_record(bundle: ProblemBundle) -> dict[str, str]:
         "instruction": (
             "Solve the algorithm problem using C++17 within the stated resource limits. "
             "Use this exact response structure:\n"
+            "Solution Explanation:\n"
+            "...\n"
             "Time Complexity: O(...)\n"
             "Space Complexity: O(...)\n"
             "```cpp\n...\n```"
@@ -48,6 +50,8 @@ def _dpo_record(bundle: ProblemBundle) -> dict[str, str]:
         "prompt": bundle.spec.prompt(),
         "chosen": _format_answer(bundle),
         "rejected": (
+            "Solution Explanation:\n"
+            "The solution is incomplete and does not solve the problem reliably.\n"
             "Time Complexity: unknown\n"
             "Space Complexity: unknown\n"
             "```cpp\n#include <bits/stdc++.h>\nusing namespace std;\nint main(){return 0;}\n```"
@@ -66,9 +70,23 @@ def _grpo_record(bundle: ProblemBundle) -> dict[str, str]:
 def _format_answer(bundle: ProblemBundle) -> str:
     time_complexity, space_complexity = _complexity_fields(bundle)
     return (
+        f"Solution Explanation:\n{_solution_explanation(bundle)}\n\n"
         f"Time Complexity: {time_complexity}\n"
         f"Space Complexity: {space_complexity}\n"
         f"```cpp\n{_cpp_solution(bundle)}\n```"
+    )
+
+
+def _solution_explanation(bundle: ProblemBundle) -> str:
+    tags = ", ".join(bundle.oracle.tags)
+    if tags:
+        return (
+            f"Use the relevant algorithmic ideas for this problem ({tags}), "
+            "handle the input exactly as specified, and produce the required output format."
+        )
+    return (
+        "Derive the required computation from the statement, handle the input exactly as specified, "
+        "and produce the required output format."
     )
 
 

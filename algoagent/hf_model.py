@@ -66,7 +66,10 @@ class HuggingFaceModel:
         prompt += (
             f"\nAttempt: {attempt}\n"
             "Use this exact response structure:\n"
-            "Time Complexity: O(...)\nSpace Complexity: O(...)\n```cpp\n...\n```\n"
+            "Solution Explanation:\n...\n\n"
+            "Time Complexity: O(...)\n"
+            "Space Complexity: O(...)\n"
+            "```cpp\n...\n```\n"
         )
         if feedback:
             prompt += f"\nPrevious attempt feedback:\n{feedback[:4000]}\n"

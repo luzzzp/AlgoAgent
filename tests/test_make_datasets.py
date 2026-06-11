@@ -25,6 +25,7 @@ class MakeDatasetsTest(unittest.TestCase):
 
         answer = make_datasets._format_answer(bundle)
 
+        self.assertIn("Solution Explanation:", answer)
         self.assertIn("Time Complexity: O(n)", answer)
         self.assertIn("Space Complexity: O(1)", answer)
         self.assertIn("```cpp", answer)
