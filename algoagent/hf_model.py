@@ -66,6 +66,7 @@ class HuggingFaceModel:
         prompt += (
             f"\nAttempt: {attempt}\n"
             "Use this exact response structure:\n"
+            "Write Solution Explanation in Chinese.\n"
             "Solution Explanation:\n...\n\n"
             "Time Complexity: O(...)\n"
             "Space Complexity: O(...)\n"

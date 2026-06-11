@@ -244,3 +244,35 @@ Held-out 100 评测结果：
 - 新增失败案例分析脚本，从评测 JSON 中抽取 REPAIR_TEST_FAILED、COMPILE_FAILED、TIMEOUT、HELD_OUT_TEST_FAILED 的代表样例。
 - 分析模型错误是题意理解、输入输出格式、边界条件、复杂度还是算法选择问题。
 - 在此基础上构造更有针对性的 DPO 数据或 GRPO reward，而不是直接进行泛化的偏好训练。
+
+## 2026-06-11：SFT 数据格式与中文 Solution Explanation 调整
+
+目标：
+
+- 明确 SFT 阶段的主要目标不是直接提升算法正确率，而是让模型学会稳定输出算法题解的标准格式。
+- 由于最终用户和面试表达更偏中文场景，将 `Solution Explanation` 统一要求为中文。
+
+调整内容：
+
+- SFT 输出结构统一为：
+  - `Solution Explanation:` 中文解题思路
+  - `Time Complexity: ...`
+  - `Space Complexity: ...`
+  - C++17 代码块
+- `scripts/make_datasets.py` 在生成 SFT 数据时，显式要求 Solution Explanation 使用中文。
+- `algoagent/hf_model.py` 和格式评测脚本中的 prompt 同步要求模型用中文写解题思路。
+- 当前中文 explanation 先采用模板化生成：结合题意、输入输出要求、约束和可用算法标签，生成简洁中文说明。该部分主要用于训练输出风格，后续再通过更高质量题解数据和 DPO 提升解释质量。
+
+指标调整：
+
+- SFT 格式评测不再使用 `Compile Rate` 作为核心指标，因为编译率更能反映代码质量，而不是格式遵循能力。
+- SFT 阶段保留以下指标：
+  - `Format Valid Rate`
+  - `Chinese Explanation Rate`
+  - `Complexity Field Rate`
+  - `Cpp Code Block Rate`
+
+阶段结论：
+
+- SFT 的定位应改为“格式对齐 + 中文题解表达 + 基础代码输出稳定性”。
+- 代码正确性、隐藏测试通过率和修复能力应主要通过 DPO、GRPO 或 Agent 闭环评测衡量。

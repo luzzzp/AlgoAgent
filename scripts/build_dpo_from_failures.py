@@ -130,7 +130,9 @@ def _format_rejected(problem: dict[str, Any], code: str) -> str:
     space_complexity = complexity.get("space_complexity") or "unknown"
     return (
         "Solution Explanation:\n"
-        "The attempted solution failed validation and should not be preferred.\n\n"
+        "\u8be5\u5019\u9009\u4ee3\u7801\u672a\u901a\u8fc7\u6d4b\u8bd5\u9a8c\u8bc1\uff0c"
+        "\u8bf4\u660e\u5176\u7b97\u6cd5\u3001\u8fb9\u754c\u5904\u7406\u6216\u8f93\u51fa\u683c\u5f0f\u5b58\u5728\u95ee\u9898\uff0c"
+        "\u4e0d\u5e94\u4f5c\u4e3a\u4f18\u5148\u7b54\u6848\u3002\n\n"
         f"Time Complexity: {time_complexity}\n"
         f"Space Complexity: {space_complexity}\n"
         f"```cpp\n{code.strip()}\n```"

@@ -33,6 +33,7 @@ def _sft_record(bundle: ProblemBundle) -> dict[str, str]:
     return {
         "instruction": (
             "Solve the algorithm problem using C++17 within the stated resource limits. "
+            "The Solution Explanation section must be written in Chinese. "
             "Use this exact response structure:\n"
             "Solution Explanation:\n"
             "...\n"
@@ -51,7 +52,7 @@ def _dpo_record(bundle: ProblemBundle) -> dict[str, str]:
         "chosen": _format_answer(bundle),
         "rejected": (
             "Solution Explanation:\n"
-            "The solution is incomplete and does not solve the problem reliably.\n"
+            "\u8be5\u5019\u9009\u4ee3\u7801\u672a\u80fd\u7a33\u5b9a\u901a\u8fc7\u9a8c\u8bc1\uff0c\u4e0d\u5e94\u4f5c\u4e3a\u4f18\u5148\u7b54\u6848\u3002\n"
             "Time Complexity: unknown\n"
             "Space Complexity: unknown\n"
             "```cpp\n#include <bits/stdc++.h>\nusing namespace std;\nint main(){return 0;}\n```"
@@ -81,12 +82,15 @@ def _solution_explanation(bundle: ProblemBundle) -> str:
     tags = ", ".join(bundle.oracle.tags)
     if tags:
         return (
-            f"Use the relevant algorithmic ideas for this problem ({tags}), "
-            "handle the input exactly as specified, and produce the required output format."
+            f"\u6839\u636e\u9898\u610f\u5206\u6790\u8f93\u5165\u89c4\u6a21\u548c\u8f93\u51fa\u8981\u6c42\uff0c"
+            f"\u7ed3\u5408 {tags} \u7b49\u7b97\u6cd5\u601d\u60f3\u8bbe\u8ba1\u89e3\u6cd5\u3002"
+            "\u5b9e\u73b0\u65f6\u9700\u8981\u6309\u7167\u9898\u76ee\u7ed9\u5b9a\u7684\u8f93\u5165\u683c\u5f0f\u8bfb\u53d6\u6570\u636e\uff0c"
+            "\u5e76\u4e25\u683c\u8f93\u51fa\u8981\u6c42\u7684\u7ed3\u679c\u3002"
         )
     return (
-        "Derive the required computation from the statement, handle the input exactly as specified, "
-        "and produce the required output format."
+        "\u6839\u636e\u9898\u610f\u63a8\u5bfc\u9700\u8981\u8ba1\u7b97\u7684\u76ee\u6807\uff0c"
+        "\u6309\u7167\u7ea6\u675f\u9009\u62e9\u80fd\u5728\u65f6\u95f4\u548c\u7a7a\u95f4\u9650\u5236\u5185\u901a\u8fc7\u7684\u65b9\u6cd5\u3002"
+        "\u5b9e\u73b0\u65f6\u9700\u8981\u51c6\u786e\u5904\u7406\u8f93\u5165\u8f93\u51fa\u683c\u5f0f\u548c\u8fb9\u754c\u60c5\u51b5\u3002"
     )
 
 
