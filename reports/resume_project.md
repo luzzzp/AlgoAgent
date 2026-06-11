@@ -63,3 +63,28 @@ Held-out 50 评测：
 - 增加失败日志分析，区分编译错误、超时、边界错误和算法错误。
 - 为复杂度字段构造更可靠的标注，降低 Complexity Unknown Rate。
 - 在 SFT 数据扩大后进行 DPO 或 GRPO，使用测试通过率作为可验证奖励。
+
+## 最新实验补充：TACO-1000
+
+数据构造：
+
+- TACO-verified 题目数：1000
+- verified Python oracle：973 / 1000
+- verified C++ 解法：518 / 973
+- Python-to-C++ 严格验证转化率：53.2%
+- SFT 训练数据：518 条
+
+Held-out 100 评测：
+
+| 方法 | Compile Rate | Repair Test Pass | Held-out Pass | Verified Success |
+|---|---:|---:|---:|---:|
+| Base | 87% | 24.3% | 11% | 11% |
+| SFT-1000 | 90% | 28.3% | 11.9% | 11% |
+| SFT-1000 + Agent | 97% | 31.6% | 12.9% | 12% |
+
+实验结论：
+
+- 扩展到 518 条 verified C++ 后，SFT 主要提升了编译率和测试通过比例。
+- SFT-1000 的 Compile Rate 从 87% 提升到 90%，Repair Test Pass Rate 从 24.3% 提升到 28.3%。
+- 加入 3 轮 Agent 修复后，final Compile Rate 提升到 97%，Verified Success Rate 从 11% 小幅提升到 12%。
+- 该实验说明当前 SFT 更擅长改善输出格式和可编译性，但对算法正确性的提升有限，下一阶段需要失败案例分析、DPO/GRPO 或更高质量的题解推理数据。

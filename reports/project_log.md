@@ -202,3 +202,45 @@ Held-out 50：
 - 增加失败案例分析脚本，统计编译错误、超时、WA、边界错误的比例。
 - 为 verified C++ 数据补充更可靠的复杂度标注。
 - 在 SFT 数据扩大后，再进行 DPO 或 GRPO 实验。
+
+## 2026-06-11：TACO-1000 数据扩展与 SFT-1000 评测
+
+目标：
+
+- 将 verified C++ 训练数据从 97 条扩展到数百条。
+- 验证扩大 SFT 数据后，模型在 held-out 100 上是否有更明显提升。
+
+数据构造结果：
+
+- TACO-verified 题目数：1000。
+- verified Python oracle：973 / 1000。
+- failed Python solution：27 / 1000。
+- verified C++ 解法：518 / 973。
+- Python-to-C++ 严格验证转化率：53.2%。
+
+观察：
+
+- 虽然使用的是 TACO-verified，仍有 27 道题未找到可通过本地测试的 Python oracle。
+- 这说明不能盲目信任数据集标注，重新执行验证是必要的数据清洗步骤。
+- Python-to-C++ 转化率从 200 道阶段的 49.7% 提升到 1000 道阶段的 53.2%，说明当前数据生产流水线具有一定稳定性。
+
+Held-out 100 评测结果：
+
+| 方法 | Compile Rate | Repair Test Pass | Held-out Pass | Verified Success |
+|---|---:|---:|---:|---:|
+| Base | 87% | 24.3% | 11% | 11% |
+| SFT-1000 | 90% | 28.3% | 11.9% | 11% |
+| SFT-1000 + Agent | 97% | 31.6% | 12.9% | 12% |
+
+结论：
+
+- SFT-1000 提升了编译率和 repair test pass rate，但 Verified Success Rate 没有明显提升。
+- Agent 修复将 final Compile Rate 从 90% 提升到 97%，说明反馈闭环对编译错误修复有效。
+- Verified Success Rate 仅从 11% 提升到 12%，说明当前主要瓶颈已经不是可编译性，而是算法正确性、边界条件和题意理解。
+- 失败类型仍以 `REPAIR_TEST_FAILED` 为主，下一阶段应优先做失败样本分析，而不是继续盲目扩 SFT。
+
+下一步调整：
+
+- 新增失败案例分析脚本，从评测 JSON 中抽取 REPAIR_TEST_FAILED、COMPILE_FAILED、TIMEOUT、HELD_OUT_TEST_FAILED 的代表样例。
+- 分析模型错误是题意理解、输入输出格式、边界条件、复杂度还是算法选择问题。
+- 在此基础上构造更有针对性的 DPO 数据或 GRPO reward，而不是直接进行泛化的偏好训练。
