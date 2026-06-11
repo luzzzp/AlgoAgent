@@ -19,6 +19,7 @@ def _load_script(name: str, path: str):
 
 verify_script = _load_script("verify_python_oracles", "scripts/verify_python_oracles.py")
 translate_script = _load_script("translate_python_to_cpp", "scripts/translate_python_to_cpp.py")
+filter_script = _load_script("filter_verified_cpp_problems", "scripts/filter_verified_cpp_problems.py")
 
 
 class OraclePipelineTest(unittest.TestCase):
@@ -62,6 +63,34 @@ class OraclePipelineTest(unittest.TestCase):
             bundle = load_problem(out / "bad.json")
             self.assertFalse(next(sol for sol in bundle.oracle.solutions if sol.language == "python3").verified)
 
+    def test_filters_only_verified_cpp_problems(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "source"
+            out = root / "out"
+            source.mkdir()
+            verified = _echo_problem()
+            verified["oracle"]["solutions"].append(
+                {
+                    "language": "cpp17",
+                    "code": "#include <bits/stdc++.h>\nusing namespace std;\nint main(){return 0;}\n",
+                    "verified": True,
+                }
+            )
+            unverified = _echo_problem()
+            unverified["problem"]["id"] = "bad"
+            (source / "verified.json").write_text(json.dumps(verified), encoding="utf-8")
+            (source / "bad.json").write_text(json.dumps(unverified), encoding="utf-8")
+            (source / "_manifest.json").write_text("{}", encoding="utf-8")
+
+            report = filter_script.filter_verified_cpp_problems(source, out)
+
+            self.assertEqual(report["copied"], 1)
+            self.assertEqual(report["skipped_no_verified_cpp"], 1)
+            self.assertTrue((out / "verified.json").exists())
+            self.assertFalse((out / "bad.json").exists())
+            self.assertTrue((out / "_manifest.json").exists())
+
 
 def _echo_problem() -> dict:
     return {
@@ -94,4 +123,3 @@ def _echo_problem() -> dict:
 
 if __name__ == "__main__":
     unittest.main()
-
