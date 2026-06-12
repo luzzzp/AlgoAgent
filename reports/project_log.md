@@ -276,3 +276,39 @@ Held-out 100 评测结果：
 
 - SFT 的定位应改为“格式对齐 + 中文题解表达 + 基础代码输出稳定性”。
 - 代码正确性、隐藏测试通过率和修复能力应主要通过 DPO、GRPO 或 Agent 闭环评测衡量。
+
+## 2026-06-12：SFT 格式评测结果与失败样本分析
+
+目标：
+
+- 使用新的 SFT 格式指标评估 Base 与 SFT 模型在结构化题解输出上的差异。
+- 将 SFT 阶段从“代码正确率提升”中拆出来，单独验证其是否学会稳定输出中文 explanation、复杂度字段和 C++ 代码块。
+
+格式评测结果：
+
+| 方法 | Format Valid Rate | Chinese Explanation Rate | Complexity Field Rate | Cpp Code Block Rate |
+|---|---:|---:|---:|---:|
+| Base | 51.8% | 100.0% | 51.8% | 100.0% |
+| SFT | 99.6% | 100.0% | 100.0% | 99.6% |
+
+阶段结论：
+
+- SFT 的主要收益是稳定输出复杂度字段和标准题解结构。
+- Base 在强提示词下已经可以稳定输出中文 explanation 和 C++ 代码块，但复杂度字段格式不稳定，导致整体 Format Valid Rate 只有 51.8%。
+- SFT 后 Format Valid Rate 提升到 99.6%，Complexity Field Rate 提升到 100.0%，说明 SFT 对格式遵循能力的提升非常明确。
+- 当前 SFT 格式阶段可以收口，后续重点应转向代码正确性、失败样本 DPO、Agent 修复和用户追问对话能力。
+
+失败样本分析：
+
+- 500 道格式评测中，SFT 仅约 2 道题 `format_valid=false`，占比约 0.4%。
+- 代表样本包括 `taco_279_taco_problem_279` 和 `taco_43_taco_problem_43`。
+- 这两个样本均已输出中文 `Solution Explanation`、`Time Complexity`、`Space Complexity` 和 C++ 代码块开头。
+- 失败原因初步判断不是中文解释或复杂度字段缺失，而是回答较长时 C++ 代码块没有正常闭合，导致 `cpp_code_block=false`。
+- 由于当前 report 中只保存 `response_preview`，该结论来自预览内容和字段结果，后续如需严格定位，应保存完整 completion 再检查。
+
+数据质量问题：
+
+- 当前模板化 `Solution Explanation` 会直接拼接原始 tags，出现类似 `['Number theory', 'Mathematics'], ['number theory', 'math']` 的表达。
+- 这种写法格式上可通过，但用户体验不好，也不适合作为最终中文题解展示。
+- 后续应将 tags 从 explanation 模板中移除，或清洗为自然中文算法名称，例如“数论、数学、树形 DP、图遍历”。
+- SFT explanation 的定位仍是“格式与中文表达训练”，不是最终高质量题解的完整来源；真正面向用户的解释应在 verified code 之后由模型基于题目、代码和复杂度重新生成。
