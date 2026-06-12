@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 from pathlib import Path
+import tempfile
 import unittest
 
 
@@ -87,6 +89,32 @@ int main(){return 0;}
         self.assertEqual(summary["chinese_explanation_rate"], 0.5)
         self.assertEqual(summary["complexity_field_rate"], 1.0)
         self.assertNotIn("compile_rate", summary)
+
+    def test_loads_resume_results(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "report.json"
+            path.write_text(
+                json.dumps(
+                    {
+                        "problems": [
+                            {"problem_id": "p1", "format_valid": True},
+                            {"problem_id": "p2", "format_valid": False},
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            results, completed = format_eval.load_resume_results(path)
+
+        self.assertEqual(len(results), 2)
+        self.assertEqual(completed, {"p1", "p2"})
+
+    def test_missing_resume_report_is_empty(self) -> None:
+        results, completed = format_eval.load_resume_results(Path("does-not-exist.json"))
+
+        self.assertEqual(results, [])
+        self.assertEqual(completed, set())
 
 
 if __name__ == "__main__":

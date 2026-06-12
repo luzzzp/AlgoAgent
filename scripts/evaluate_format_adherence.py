@@ -25,20 +25,13 @@ def main() -> None:
     parser.add_argument("--max-new-tokens", type=int, default=2048)
     parser.add_argument("--temperature", type=float, default=0.0)
     parser.add_argument("--load-in-4bit", action="store_true")
+    parser.add_argument("--resume", action="store_true", help="Skip problem_ids already present in --out.")
     args = parser.parse_args()
 
     problems = load_problems(args.problems)
     if args.limit:
         problems = problems[: args.limit]
 
-    model = HuggingFaceModel(
-        args.model,
-        adapter_path=args.adapter,
-        max_new_tokens=args.max_new_tokens,
-        temperature=args.temperature,
-        load_in_4bit=args.load_in_4bit,
-    )
-    results = []
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     metadata = {
@@ -50,8 +43,27 @@ def main() -> None:
         "temperature": args.temperature,
         "load_in_4bit": args.load_in_4bit,
     }
+    results, completed_problem_ids = load_resume_results(out_path) if args.resume else ([], set())
+    remaining = [bundle for bundle in problems if bundle.spec.id not in completed_problem_ids]
+    if args.resume and results:
+        print(f"Resuming from {out_path}: {len(results)} completed, {len(remaining)} remaining.", flush=True)
+    if not remaining:
+        report = {"metadata": metadata, "summary": summarize(results), "problems": results}
+        out_path.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
+        print(json.dumps(report["summary"], indent=2, ensure_ascii=False))
+        return
 
-    for index, bundle in enumerate(problems, start=1):
+    model = HuggingFaceModel(
+        args.model,
+        adapter_path=args.adapter,
+        max_new_tokens=args.max_new_tokens,
+        temperature=args.temperature,
+        load_in_4bit=args.load_in_4bit,
+    )
+    problem_positions = {bundle.spec.id: index for index, bundle in enumerate(problems, start=1)}
+
+    for bundle in remaining:
+        index = problem_positions[bundle.spec.id]
         print(f"[{index}/{len(problems)}] {bundle.spec.id}", flush=True)
         completion = generate_format_response(model, bundle)
         result = evaluate_completion(bundle, completion)
@@ -69,6 +81,21 @@ def main() -> None:
     report = {"metadata": metadata, "summary": summarize(results), "problems": results}
     out_path.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
     print(json.dumps(report["summary"], indent=2, ensure_ascii=False))
+
+
+def load_resume_results(path: Path) -> tuple[list[dict[str, Any]], set[str]]:
+    if not path.exists():
+        return [], set()
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    results = payload.get("problems", [])
+    if not isinstance(results, list):
+        return [], set()
+    completed_problem_ids = {
+        str(item["problem_id"])
+        for item in results
+        if isinstance(item, dict) and item.get("problem_id")
+    }
+    return results, completed_problem_ids
 
 
 def generate_format_response(model: HuggingFaceModel, bundle: ProblemBundle) -> str:
