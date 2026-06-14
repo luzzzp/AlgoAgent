@@ -66,6 +66,35 @@ class ConvertTacoPythonTest(unittest.TestCase):
         self.assertEqual(io_mode, "callable")
         self.assertEqual(entry_point, "twoSum")
 
+    def test_callable_outputs_unwrap_singleton_expected_values(self) -> None:
+        row = {
+            "input_output": {
+                "fn_name": "make_acronym",
+                "inputs": [["Make America Strong"]],
+                "outputs": [["MAS"]],
+            }
+        }
+
+        inputs, outputs, io_mode, entry_point = convert_taco_python._extract_tests(row)
+
+        self.assertEqual(inputs, ['["Make America Strong"]'])
+        self.assertEqual(outputs, ['"MAS"'])
+        self.assertEqual(io_mode, "callable")
+        self.assertEqual(entry_point, "make_acronym")
+
+    def test_callable_outputs_keep_non_singleton_lists(self) -> None:
+        row = {
+            "input_output": {
+                "fn_name": "pair",
+                "inputs": [[1]],
+                "outputs": [[1, 0]],
+            }
+        }
+
+        _, outputs, _, _ = convert_taco_python._extract_tests(row)
+
+        self.assertEqual(outputs, ["[1, 0]"])
+
 
 if __name__ == "__main__":
     unittest.main()

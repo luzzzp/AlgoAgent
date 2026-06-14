@@ -5,7 +5,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from algoagent.schema import load_problem
+from algoagent.schema import load_problem, normalize_output
 
 
 class SchemaTest(unittest.TestCase):
@@ -30,7 +30,9 @@ class SchemaTest(unittest.TestCase):
         self.assertEqual(bundle.tests.eval_tests[0].id, "eval-0001")
         self.assertIn("Language: python3", bundle.spec.prompt(bundle.tests.visible_tests))
 
+    def test_normalize_output_ignores_outer_line_whitespace(self) -> None:
+        self.assertEqual(normalize_output("        0\n        3\n"), "0\n3")
+
 
 if __name__ == "__main__":
     unittest.main()
-

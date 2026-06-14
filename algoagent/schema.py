@@ -170,7 +170,7 @@ def normalize_output(text: str | bytes | None) -> str:
     if isinstance(text, bytes):
         text = text.decode("utf-8", errors="replace")
     text = text.replace("\r\n", "\n").replace("\r", "\n")
-    lines = [line.rstrip() for line in text.split("\n")]
+    lines = [line.strip() for line in text.split("\n")]
     while lines and lines[0] == "":
         lines.pop(0)
     while lines and lines[-1] == "":

@@ -138,7 +138,7 @@ def _extract_tests(row: dict[str, Any]) -> tuple[list[str], list[str], str, str]
         if entry_point:
             return (
                 _as_callable_cases(io.get("inputs")),
-                _as_callable_cases(io.get("outputs")),
+                _as_callable_cases(io.get("outputs"), unwrap_singleton=True),
                 "callable",
                 entry_point,
             )
@@ -199,7 +199,7 @@ def _case_text(value: Any) -> str:
     return str(value)
 
 
-def _as_callable_cases(value: Any) -> list[str]:
+def _as_callable_cases(value: Any, unwrap_singleton: bool = False) -> list[str]:
     if value is None:
         return []
     if isinstance(value, str):
@@ -209,12 +209,18 @@ def _as_callable_cases(value: Any) -> list[str]:
             decoded = value
         value = decoded
     if isinstance(value, list):
-        return [_json_case_text(item) for item in value]
+        return [_json_case_text(_unwrap_singleton(item) if unwrap_singleton else item) for item in value]
     return [_json_case_text(value)]
 
 
 def _json_case_text(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, sort_keys=True)
+
+
+def _unwrap_singleton(value: Any) -> Any:
+    if isinstance(value, list) and len(value) == 1:
+        return value[0]
+    return value
 
 
 def _parse_time_limit(value: Any) -> float:
