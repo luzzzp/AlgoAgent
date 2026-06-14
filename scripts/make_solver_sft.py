@@ -17,13 +17,19 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Build Solver SFT data for AlgoAgent.")
     parser.add_argument("--problems", required=True)
     parser.add_argument("--out-dir", required=True)
+    parser.add_argument("--annotations", default="")
     parser.add_argument("--limit", type=int, default=0)
     args = parser.parse_args()
 
     bundles = load_problems(args.problems)
     if args.limit:
         bundles = bundles[: args.limit]
-    records = [_record(bundle) for bundle in bundles if bundle.oracle.best_solution("python3")]
+    annotations = _load_annotations(args.annotations) if args.annotations else {}
+    records = [
+        _record(bundle, annotations.get(bundle.spec.id))
+        for bundle in bundles
+        if bundle.oracle.best_solution("python3")
+    ]
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     with (out_dir / "solver_sft.jsonl").open("w", encoding="utf-8") as handle:
@@ -32,7 +38,7 @@ def main() -> None:
     print(json.dumps({"stage": "make_solver_sft", "records": len(records)}, indent=2))
 
 
-def _record(bundle: ProblemBundle) -> dict[str, str]:
+def _record(bundle: ProblemBundle, annotation: dict | None = None) -> dict[str, str]:
     return {
         "instruction": (
             "Solve the algorithm problem in Python 3. "
@@ -40,20 +46,22 @@ def _record(bundle: ProblemBundle) -> dict[str, str]:
             "Use exact sections: Solution Explanation, Time Complexity, Space Complexity, and a python code block."
         ),
         "input": bundle.spec.prompt(bundle.tests.visible_tests),
-        "output": _answer(bundle),
+        "output": _answer(bundle, annotation),
     }
 
 
-def _answer(bundle: ProblemBundle) -> str:
+def _answer(bundle: ProblemBundle, annotation: dict | None = None) -> str:
     return (
-        f"Solution Explanation:\n{_explanation(bundle)}\n\n"
-        f"Time Complexity: {_time_complexity(bundle)}\n"
-        f"Space Complexity: {_space_complexity(bundle)}\n"
+        f"Solution Explanation:\n{_explanation(bundle, annotation)}\n\n"
+        f"Time Complexity: {_time_complexity(bundle, annotation)}\n"
+        f"Space Complexity: {_space_complexity(bundle, annotation)}\n"
         f"```python\n{bundle.oracle.best_solution('python3').strip()}\n```"
     )
 
 
-def _explanation(bundle: ProblemBundle) -> str:
+def _explanation(bundle: ProblemBundle, annotation: dict | None = None) -> str:
+    if annotation and annotation.get("solution_explanation"):
+        return str(annotation["solution_explanation"]).strip()
     if bundle.spec.io_mode == "callable" and bundle.spec.entry_point:
         io_sentence = (
             f"本题是函数式任务，需要实现 `{bundle.spec.entry_point}` 函数，"
@@ -82,11 +90,15 @@ def _explanation(bundle: ProblemBundle) -> str:
     )
 
 
-def _time_complexity(bundle: ProblemBundle) -> str:
+def _time_complexity(bundle: ProblemBundle, annotation: dict | None = None) -> str:
+    if annotation and annotation.get("time_complexity"):
+        return str(annotation["time_complexity"]).strip()
     return _complexity_by_label(bundle.oracle.expected_complexity, "time")
 
 
-def _space_complexity(bundle: ProblemBundle) -> str:
+def _space_complexity(bundle: ProblemBundle, annotation: dict | None = None) -> str:
+    if annotation and annotation.get("space_complexity"):
+        return str(annotation["space_complexity"]).strip()
     return _complexity_by_label(bundle.oracle.expected_complexity, "space")
 
 
@@ -105,6 +117,19 @@ def _complexity_by_label(text: str, label: str) -> str:
 def _extract_o_notation(text: str) -> str:
     match = re.search(r"O\s*\([^)]+\)", text, flags=re.I)
     return match.group(0).strip() if match else ""
+
+
+def _load_annotations(path: str) -> dict[str, dict]:
+    annotations = {}
+    with Path(path).open(encoding="utf-8") as handle:
+        for line in handle:
+            if not line.strip():
+                continue
+            record = json.loads(line)
+            problem_id = record.get("problem_id")
+            if problem_id:
+                annotations[str(problem_id)] = record
+    return annotations
 
 
 if __name__ == "__main__":

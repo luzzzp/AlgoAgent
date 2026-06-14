@@ -32,8 +32,17 @@ python scripts/verify_python_oracles.py \
   --problems data/problems/taco_python_1000 \
   --out-dir data/problems/taco_python_1000_verified
 
+python scripts/generate_solution_annotations.py \
+  --problems data/problems/taco_python_1000_verified \
+  --out data/processed/taco_python_1000_annotations.jsonl \
+  --backend hf \
+  --model Qwen/Qwen2.5-Coder-7B-Instruct \
+  --load-in-4bit \
+  --resume
+
 python scripts/make_solver_sft.py \
   --problems data/problems/taco_python_1000_verified \
+  --annotations data/processed/taco_python_1000_annotations.jsonl \
   --out-dir data/processed/taco_python_1000_solver_sft
 
 python scripts/make_dialogue_sft.py \

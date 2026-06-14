@@ -59,6 +59,24 @@ class MakeSolverSftTest(unittest.TestCase):
         self.assertIn("`add`", answer)
         self.assertIn("Space Complexity: O(1)", answer)
 
+    def test_answer_uses_external_annotation(self) -> None:
+        bundle = ProblemBundle(
+            spec=ProblemSpec(id="p", title="P", statement="Solve it."),
+            tests=TestSuite(),
+            oracle=OracleMetadata(solutions=[OracleSolution("python3", "print(1)", True)]),
+        )
+        annotation = {
+            "solution_explanation": "这是一段结合题意生成的中文解析。",
+            "time_complexity": "O(n)",
+            "space_complexity": "O(1)",
+        }
+
+        answer = make_solver_sft._answer(bundle, annotation)
+
+        self.assertIn("这是一段结合题意生成的中文解析。", answer)
+        self.assertIn("Time Complexity: O(n)", answer)
+        self.assertIn("Space Complexity: O(1)", answer)
+
 
 if __name__ == "__main__":
     unittest.main()
