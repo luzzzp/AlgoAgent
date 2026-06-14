@@ -132,8 +132,8 @@ def _extract_tests(row: dict[str, Any]) -> tuple[list[str], list[str]]:
         except json.JSONDecodeError:
             io = {}
     if isinstance(io, dict):
-        return _as_list(io.get("inputs")), _as_list(io.get("outputs"))
-    return _as_list(row.get("inputs")), _as_list(row.get("outputs"))
+        return _as_test_cases(io.get("inputs")), _as_test_cases(io.get("outputs"))
+    return _as_test_cases(row.get("inputs")), _as_test_cases(row.get("outputs"))
 
 
 def _extract_python_solutions(row: dict[str, Any]) -> list[str]:
@@ -163,6 +163,30 @@ def _as_list(value: Any) -> list[str]:
             pass
         return [value]
     return [str(value)]
+
+
+def _as_test_cases(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, str):
+        try:
+            decoded = json.loads(value)
+        except json.JSONDecodeError:
+            return [value]
+        if isinstance(decoded, list):
+            return [_case_text(item) for item in decoded]
+        return [_case_text(decoded)]
+    if isinstance(value, list):
+        return [_case_text(item) for item in value]
+    return [_case_text(value)]
+
+
+def _case_text(value: Any) -> str:
+    if isinstance(value, str):
+        return value
+    if isinstance(value, list):
+        return "\n".join(_case_text(item) for item in value)
+    return str(value)
 
 
 def _parse_time_limit(value: Any) -> float:

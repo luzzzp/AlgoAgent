@@ -35,6 +35,19 @@ class ConvertTacoPythonTest(unittest.TestCase):
         self.assertEqual(convert_taco_python._parse_memory_limit("256 megabytes"), 256)
         self.assertEqual(convert_taco_python._parse_memory_limit("1 GB"), 1024)
 
+    def test_nested_test_case_lines_are_joined(self) -> None:
+        row = {
+            "input_output": {
+                "inputs": [["1", "5 10"], "7\n8"],
+                "outputs": [["50"], "15"],
+            }
+        }
+
+        inputs, outputs = convert_taco_python._extract_tests(row)
+
+        self.assertEqual(inputs, ["1\n5 10", "7\n8"])
+        self.assertEqual(outputs, ["50", "15"])
+
 
 if __name__ == "__main__":
     unittest.main()
