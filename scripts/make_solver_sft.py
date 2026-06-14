@@ -14,7 +14,7 @@ from algoagent.schema import ProblemBundle, load_problems
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Build Solver SFT data for AlgoAgent-Py.")
+    parser = argparse.ArgumentParser(description="Build Solver SFT data for AlgoAgent.")
     parser.add_argument("--problems", required=True)
     parser.add_argument("--out-dir", required=True)
     parser.add_argument("--limit", type=int, default=0)
@@ -54,22 +54,58 @@ def _answer(bundle: ProblemBundle) -> str:
 
 
 def _explanation(bundle: ProblemBundle) -> str:
+    if bundle.spec.io_mode == "callable" and bundle.spec.entry_point:
+        io_sentence = (
+            f"本题是函数式任务，需要实现 `{bundle.spec.entry_point}` 函数，"
+            "根据传入参数计算并直接返回结果，不需要额外从标准输入读取。"
+        )
+    else:
+        io_sentence = "本题是标准输入输出任务，需要按照题面格式从 stdin 读取数据，并将答案输出到 stdout。"
+
+    time_complexity = _time_complexity(bundle)
+    space_complexity = _space_complexity(bundle)
+    complexity_parts = []
+    if time_complexity != "unknown":
+        complexity_parts.append(f"时间复杂度目标约为 {time_complexity}")
+    if space_complexity != "unknown":
+        complexity_parts.append(f"空间复杂度目标约为 {space_complexity}")
+    if complexity_parts:
+        complexity_sentence = "，".join(complexity_parts) + "。"
+    else:
+        complexity_sentence = "实现时需要根据题目约束选择能在时间限制内通过的算法。"
+
     return (
-        "根据题意分析输入规模、输出要求和边界条件，选择能够在时间限制内通过的算法。"
-        "实现时按照题目给定的输入格式读取数据，并严格输出要求的结果。"
+        f"{io_sentence}"
+        f"{complexity_sentence}"
+        "下面的参考实现已通过该题的可见测试、奖励测试和留出测试；"
+        "本条样本用于训练模型稳定输出中文题解、复杂度字段和可执行 Python 代码。"
     )
 
 
 def _time_complexity(bundle: ProblemBundle) -> str:
-    complexities = re.findall(r"O\s*\([^)]+\)", bundle.oracle.expected_complexity, flags=re.I)
-    return complexities[0] if complexities else "unknown"
+    return _complexity_by_label(bundle.oracle.expected_complexity, "time")
 
 
 def _space_complexity(bundle: ProblemBundle) -> str:
-    complexities = re.findall(r"O\s*\([^)]+\)", bundle.oracle.expected_complexity, flags=re.I)
-    return complexities[1] if len(complexities) > 1 else "unknown"
+    return _complexity_by_label(bundle.oracle.expected_complexity, "space")
+
+
+def _complexity_by_label(text: str, label: str) -> str:
+    if not text:
+        return "unknown"
+    pattern = rf"{label}\s*:\s*([^;]+)"
+    labelled = re.search(pattern, text, flags=re.I)
+    if labelled:
+        complexity = _extract_o_notation(labelled.group(1))
+        return complexity or labelled.group(1).strip()
+    complexity = _extract_o_notation(text)
+    return complexity or "unknown"
+
+
+def _extract_o_notation(text: str) -> str:
+    match = re.search(r"O\s*\([^)]+\)", text, flags=re.I)
+    return match.group(0).strip() if match else ""
 
 
 if __name__ == "__main__":
     main()
-

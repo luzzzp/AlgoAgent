@@ -37,7 +37,28 @@ class MakeSolverSftTest(unittest.TestCase):
         self.assertIn("Time Complexity: O(1)", answer)
         self.assertIn("```python", answer)
 
+    def test_callable_answer_mentions_entry_point(self) -> None:
+        bundle = ProblemBundle(
+            spec=ProblemSpec(
+                id="p",
+                title="P",
+                statement="Solve it.",
+                io_mode="callable",
+                entry_point="add",
+            ),
+            tests=TestSuite(),
+            oracle=OracleMetadata(
+                expected_complexity="Time: O(1); Space: O(1)",
+                solutions=[OracleSolution("python3", "def add(a, b):\n    return a + b\n", True)],
+            ),
+        )
+
+        answer = make_solver_sft._answer(bundle)
+
+        self.assertIn("函数式任务", answer)
+        self.assertIn("`add`", answer)
+        self.assertIn("Space Complexity: O(1)", answer)
+
 
 if __name__ == "__main__":
     unittest.main()
-

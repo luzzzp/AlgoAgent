@@ -118,7 +118,7 @@ def convert_row(
         oracle=OracleMetadata(
             difficulty=str(row.get("difficulty") or ""),
             tags=_as_list(row.get("tags")),
-            expected_complexity=str(row.get("expected_complexity") or ""),
+            expected_complexity=_expected_complexity(row),
             solutions=solutions,
             source="TACO-verified",
             url=str(row.get("url") or ""),
@@ -157,6 +157,20 @@ def _extract_python_solutions(row: dict[str, Any]) -> list[str]:
     if isinstance(candidates, list):
         return [str(item) for item in candidates if "def " in str(item) or "input" in str(item)]
     return []
+
+
+def _expected_complexity(row: dict[str, Any]) -> str:
+    explicit = row.get("expected_complexity")
+    if explicit:
+        return str(explicit)
+    time_complexity = row.get("Expected Time Complexity") or row.get("expected_time_complexity")
+    space_complexity = row.get("Expected Auxiliary Space") or row.get("expected_auxiliary_space")
+    parts = []
+    if time_complexity:
+        parts.append(f"Time: {time_complexity}")
+    if space_complexity:
+        parts.append(f"Space: {space_complexity}")
+    return "; ".join(parts)
 
 
 def _as_list(value: Any) -> list[str]:

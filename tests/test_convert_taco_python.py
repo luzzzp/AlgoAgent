@@ -35,6 +35,14 @@ class ConvertTacoPythonTest(unittest.TestCase):
         self.assertEqual(convert_taco_python._parse_memory_limit("256 megabytes"), 256)
         self.assertEqual(convert_taco_python._parse_memory_limit("1 GB"), 1024)
 
+    def test_reads_taco_expected_complexity_fields(self) -> None:
+        row = {
+            "Expected Time Complexity": "O(n)",
+            "Expected Auxiliary Space": "O(1)",
+        }
+
+        self.assertEqual(convert_taco_python._expected_complexity(row), "Time: O(n); Space: O(1)")
+
     def test_nested_test_case_lines_are_joined(self) -> None:
         row = {
             "input_output": {
