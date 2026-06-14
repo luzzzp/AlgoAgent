@@ -7,11 +7,11 @@ AlgoAgent-Py is a Python-first algorithm problem agent project. It trains a solv
 1. Convert TACO-verified Python problems into AlgoAgent-Py JSON.
 2. Verify Python oracle solutions by executing visible, reward, and eval tests.
 3. Build Solver SFT data.
-4. Train Solver SFT.
-5. Evaluate format and executable correctness.
-6. Run Agent repair with visible-test feedback.
-7. Add GRPO/RLOO reward training smoke experiments.
-8. Build follow-up dialogue data from verified solutions.
+4. Build follow-up SFT data from verified solutions.
+5. Merge Solver + follow-up SFT data and train the SFT model.
+6. Evaluate format, follow-up behavior, and executable correctness.
+7. Run Agent repair with visible-test feedback.
+8. Add GRPO/RLOO reward training smoke experiments after SFT is complete.
 
 ## Quick Smoke Test
 
@@ -35,6 +35,17 @@ python scripts/verify_python_oracles.py \
 python scripts/make_solver_sft.py \
   --problems data/problems/taco_python_1000_verified \
   --out-dir data/processed/taco_python_1000_solver_sft
+
+python scripts/make_dialogue_sft.py \
+  --problems data/problems/taco_python_1000_verified \
+  --out-dir data/processed/taco_python_1000_followup_sft \
+  --max-questions-per-problem 5
+
+python scripts/merge_sft_datasets.py \
+  --inputs \
+    data/processed/taco_python_1000_solver_sft/solver_sft.jsonl \
+    data/processed/taco_python_1000_followup_sft/followup_sft.jsonl \
+  --out data/processed/taco_python_1000_sft/combined_sft.jsonl
 ```
 
 ## Training
@@ -42,7 +53,7 @@ python scripts/make_solver_sft.py \
 ```bash
 python training/sft_train.py \
   --model Qwen/Qwen2.5-Coder-7B-Instruct \
-  --dataset data/processed/taco_python_1000_solver_sft/solver_sft.jsonl \
+  --dataset data/processed/taco_python_1000_sft/combined_sft.jsonl \
   --output-dir outputs/solver-sft-qwen25-coder
 ```
 
@@ -61,4 +72,3 @@ python scripts/evaluate_format.py \
 ## Server Recommendation
 
 Use A800 80GB for the formal run. A100 40GB is cheaper but more likely to hit memory limits during GRPO/RLOO and multi-sample generation.
-
