@@ -44,11 +44,13 @@ def main() -> None:
     rows = dataset.select(range(args.offset, min(len(dataset), args.offset + args.limit))) if args.limit else dataset
     written = 0
     skipped = 0
+    skipped_records = []
     for idx, row in enumerate(rows, start=args.offset):
         try:
             bundle = convert_row(row, idx, args.max_visible_tests, args.max_reward_tests, args.max_eval_tests)
-        except ValueError:
+        except ValueError as exc:
             skipped += 1
+            skipped_records.append(_skipped_record(row, idx, str(exc)))
             continue
         path = out_dir / f"{bundle.spec.id}.json"
         path.write_text(json.dumps(problem_bundle_to_dict(bundle), indent=2, ensure_ascii=False), encoding="utf-8")
@@ -59,8 +61,13 @@ def main() -> None:
         "split": args.split,
         "written": written,
         "skipped": skipped,
+        "skipped_log": "_skipped.jsonl" if skipped_records else "",
     }
     (out_dir / "_manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    if skipped_records:
+        with (out_dir / "_skipped.jsonl").open("w", encoding="utf-8") as handle:
+            for record in skipped_records:
+                handle.write(json.dumps(record, ensure_ascii=False) + "\n")
     print(json.dumps(manifest, indent=2))
 
 
@@ -74,10 +81,10 @@ def convert_row(
     title = str(row.get("title") or row.get("name") or f"taco_problem_{index}")
     statement = str(row.get("statement") or row.get("question") or row.get("description") or "")
     if not statement:
-        raise ValueError("missing statement")
+        raise ValueError("missing_statement")
     inputs, outputs = _extract_tests(row)
     if not inputs or len(inputs) != len(outputs):
-        raise ValueError("missing tests")
+        raise ValueError("missing_or_mismatched_tests")
     cases = [TestCase(stdin=i, expected_stdout=o) for i, o in zip(inputs, outputs)]
     visible = cases[:max_visible]
     reward = cases[max_visible : max_visible + max_reward]
@@ -164,6 +171,30 @@ def _safe_id(index: int, title: str) -> str:
     return f"taco_{index}_{slug[:80] or 'problem'}"
 
 
+def _skipped_record(row: dict[str, Any], index: int, reason: str) -> dict[str, Any]:
+    title = row.get("title") or row.get("name") or f"taco_problem_{index}"
+    statement = row.get("statement") or row.get("question") or row.get("description") or ""
+    input_output = row.get("input_output", "")
+    return {
+        "index": index,
+        "reason": reason,
+        "title": str(title),
+        "keys": sorted(str(key) for key in row.keys()),
+        "statement_preview": _preview(statement),
+        "input_output_preview": _preview(input_output),
+        "solutions_preview": _preview(row.get("solutions") or row.get("python_solutions") or row.get("code") or ""),
+    }
+
+
+def _preview(value: Any, limit: int = 500) -> str:
+    if not isinstance(value, str):
+        try:
+            value = json.dumps(value, ensure_ascii=False)
+        except TypeError:
+            value = str(value)
+    value = value.replace("\n", "\\n")
+    return value[:limit]
+
+
 if __name__ == "__main__":
     main()
-
