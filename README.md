@@ -47,8 +47,13 @@ python scripts/make_solver_sft.py \
 
 python scripts/make_dialogue_sft.py \
   --problems data/problems/taco_python_1000_verified \
+  --annotations data/processed/taco_python_1000_annotations.jsonl \
   --out-dir data/processed/taco_python_1000_followup_sft \
-  --max-questions-per-problem 5
+  --backend hf \
+  --model Qwen/Qwen2.5-Coder-7B-Instruct \
+  --load-in-4bit \
+  --max-questions-per-problem 5 \
+  --resume
 
 python scripts/merge_sft_datasets.py \
   --inputs \
