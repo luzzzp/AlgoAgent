@@ -1,0 +1,8 @@
+torch
+transformers
+datasets>=2.18.0
+accelerate
+peft
+trl
+bitsandbytes
+
