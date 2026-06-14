@@ -116,6 +116,21 @@ class MakeDialogueSftTest(unittest.TestCase):
 
         self.assertEqual(reason, "fabricated_unknown_complexity")
 
+    def test_generation_prompt_requests_diverse_student_questions(self) -> None:
+        bundle = _bundle()
+
+        prompt = make_dialogue_sft._generation_prompt(
+            bundle,
+            {"solution_explanation": "直接返回两个数的和。", "time_complexity": "O(1)", "space_complexity": "O(1)"},
+            bundle.oracle.best_solution("python3"),
+            max_questions=7,
+        )
+
+        self.assertIn("Generate exactly 7 diverse follow-up questions", prompt)
+        self.assertIn("Role-play as a student", prompt)
+        self.assertIn("specific statement or this specific code", prompt)
+        self.assertIn("do not mechanically cover them in a fixed order", prompt)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -21,6 +21,11 @@ python -m unittest discover -s tests -v
 
 ## Data Commands
 
+Solver SFT uses one record per verified problem. The full problem statement is stored in the `input`
+field, while the `output` field contains the Chinese explanation, complexity, and verified Python code.
+Follow-up SFT uses multiple records per verified problem and asks an LLM to generate diverse student-style
+questions grounded in the statement and code.
+
 ```bash
 python scripts/convert_taco_python.py \
   --dataset likaixin/TACO-verified \

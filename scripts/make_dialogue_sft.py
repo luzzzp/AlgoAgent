@@ -28,12 +28,17 @@ SYSTEM_PROMPT = (
     "\u4e0d\u8981\u53d1\u660e\u65b0\u7b97\u6cd5\u6216\u64c5\u81ea\u4fee\u6539\u4ee3\u7801\u3002"
 )
 
-REQUIRED_CATEGORIES = [
+SUGGESTED_QUESTION_TYPES = [
     "line_explanation",
     "algorithm_idea",
     "complexity",
     "edge_cases",
     "hidden_failure_analysis",
+    "statement_understanding",
+    "variable_meaning",
+    "sample_walkthrough",
+    "implementation_detail",
+    "debugging_strategy",
 ]
 
 
@@ -113,7 +118,7 @@ def main() -> None:
 def _build_model(args) -> DialogueModel:
     if args.backend == "mock":
         return MockDialogueModel(args.max_questions_per_problem)
-    return HfDialogueModel(args.model, args.max_new_tokens, args.load_in_4bit)
+    return HfDialogueModel(args.model, args.max_new_tokens, args.load_in_4bit, args.max_questions_per_problem)
 
 
 class MockDialogueModel:
@@ -133,8 +138,8 @@ class MockDialogueModel:
                 ),
             },
             {
-                "category": "algorithm_idea",
-                "question": "\u8fd9\u4efd\u4ee3\u7801\u7684\u6838\u5fc3\u89e3\u9898\u601d\u8def\u662f\u4ec0\u4e48\uff1f",
+                "category": "statement_understanding",
+                "question": f"\u8fd9\u9053\u9898\u4e3a\u4ec0\u4e48\u53ef\u4ee5\u6309 `{bundle.spec.entry_point or 'stdin/stdout'}` \u8fd9\u79cd\u8f93\u5165\u8f93\u51fa\u65b9\u5f0f\u5904\u7406\uff1f",
                 "answer": _annotation_explanation(annotation)
                 or "\u8fd9\u4efd\u4ee3\u7801\u6839\u636e\u9898\u9762\u7ea6\u675f\u5904\u7406\u8f93\u5165\uff0c\u518d\u8ba1\u7b97\u5e76\u8fd4\u56de\u6216\u8f93\u51fa\u7ed3\u679c\u3002",
             },
@@ -144,16 +149,16 @@ class MockDialogueModel:
                 "answer": _complexity_answer(annotation, bundle),
             },
             {
-                "category": "edge_cases",
-                "question": "\u8fd9\u9053\u9898\u9700\u8981\u6ce8\u610f\u54ea\u4e9b\u8fb9\u754c\u60c5\u51b5\uff1f",
+                "category": "variable_meaning",
+                "question": "\u4ee3\u7801\u91cc\u7684\u53c2\u6570\u6216\u4e2d\u95f4\u53d8\u91cf\u5e94\u8be5\u600e\u4e48\u548c\u9898\u610f\u5bf9\u5e94\uff1f",
                 "answer": (
-                    "\u9700\u8981\u68c0\u67e5\u6700\u5c0f\u8f93\u5165\u3001\u6700\u5927\u8f93\u5165\u3001\u91cd\u590d\u5143\u7d20\u3001"
-                    "\u7a7a\u7ed3\u6784\u3001\u8fd4\u56de\u503c\u7c7b\u578b\u548c\u8f93\u51fa\u683c\u5f0f\u3002"
+                    "\u9700\u8981\u628a\u53d8\u91cf\u548c\u9898\u9762\u4e2d\u7684\u8f93\u5165\u542b\u4e49\u3001\u72b6\u6001\u542b\u4e49\u6216\u8fd4\u56de\u503c\u8981\u6c42\u5bf9\u5e94\u8d77\u6765\uff0c"
+                    "\u4e0d\u80fd\u53ea\u770b\u4ee3\u7801\u8868\u9762\u7684\u8d4b\u503c\u3002"
                 ),
             },
             {
-                "category": "hidden_failure_analysis",
-                "question": "\u5982\u679c\u6837\u4f8b\u901a\u8fc7\u4f46\u9690\u85cf\u6d4b\u8bd5\u5931\u8d25\uff0c\u5e94\u8be5\u600e\u4e48\u5206\u6790\uff1f",
+                "category": "debugging_strategy",
+                "question": "\u5982\u679c\u6211\u81ea\u5df1\u6539\u5199\u8fd9\u4efd\u4ee3\u7801\u540e\u53ea\u8fc7\u4e86\u6837\u4f8b\uff0c\u5e94\u8be5\u4f18\u5148\u68c0\u67e5\u54ea\u4e9b\u5730\u65b9\uff1f",
                 "answer": (
                     "\u5e94\u5148\u68c0\u67e5\u7b97\u6cd5\u5047\u8bbe\u662f\u5426\u8986\u76d6\u4e00\u822c\u8f93\u5165\uff0c"
                     "\u800c\u4e0d\u662f\u628a\u4ee3\u7801\u6539\u6210\u53ea\u5339\u914d\u6837\u4f8b\u3002"
@@ -165,7 +170,7 @@ class MockDialogueModel:
 
 
 class HfDialogueModel:
-    def __init__(self, model_name: str, max_new_tokens: int, load_in_4bit: bool):
+    def __init__(self, model_name: str, max_new_tokens: int, load_in_4bit: bool, max_questions: int):
         try:
             import torch
             from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -181,11 +186,12 @@ class HfDialogueModel:
         self.model = AutoModelForCausalLM.from_pretrained(model_name, **kwargs)
         self.model.eval()
         self.max_new_tokens = max_new_tokens
+        self.max_questions = max_questions
 
     def generate_dialogue(self, bundle: ProblemBundle, annotation: dict[str, Any], code: str) -> str:
         messages = [
             {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": _generation_prompt(bundle, annotation, code)},
+            {"role": "user", "content": _generation_prompt(bundle, annotation, code, self.max_questions)},
         ]
         text = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         inputs = self.tokenizer([text], return_tensors="pt").to(self.model.device)
@@ -249,14 +255,19 @@ def _invalid_item_reason(item: Any, code: str) -> str:
     return ""
 
 
-def _generation_prompt(bundle: ProblemBundle, annotation: dict[str, Any], code: str) -> str:
+def _generation_prompt(bundle: ProblemBundle, annotation: dict[str, Any], code: str, max_questions: int) -> str:
     visible = "\n\n".join(
         f"Input:\n{case.stdin}\nExpected:\n{case.expected_stdout}" for case in bundle.tests.visible_tests[:2]
     )
     return (
         "Generate follow-up SFT data for the algorithm solution below. Output JSON array only, no Markdown.\n"
         "Each item must contain: category, question, answer.\n"
-        f"Generate exactly these categories, in order: {', '.join(REQUIRED_CATEGORIES)}.\n"
+        f"Generate exactly {max_questions} diverse follow-up questions.\n"
+        "Role-play as a student who is learning algorithm problem solving and has just read the solution.\n"
+        "Questions must be naturally phrased and directly related to this specific statement or this specific code.\n"
+        f"You may use these question types, but do not mechanically cover them in a fixed order: {', '.join(SUGGESTED_QUESTION_TYPES)}.\n"
+        "Prefer concrete questions about variables, branches, loops, data structures, input/output details, sample reasoning, or why a code line is needed.\n"
+        "Avoid generic questions that could apply to any algorithm problem.\n"
         "All questions and answers must be Chinese.\n"
         "Answers must be grounded in the provided problem, annotation, and verified code.\n"
         "Do not reveal reward/eval/internal test inputs or expected outputs.\n"
