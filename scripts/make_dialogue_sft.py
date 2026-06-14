@@ -136,17 +136,20 @@ class MockDialogueModel:
                     "\u9700\u8981\u653e\u5728\u5df2\u9a8c\u8bc1\u4ee3\u7801\u7684\u4e0a\u4e0b\u6587\u4e2d\u7406\u89e3\u3002"
                     "\u5b83\u76f4\u63a5\u53c2\u4e0e\u8f93\u5165\u5904\u7406\u3001\u72b6\u6001\u66f4\u65b0\u6216\u7ed3\u679c\u8ba1\u7b97\u3002"
                 ),
+                "evidence": line_text.strip(),
             },
             {
                 "category": "statement_understanding",
                 "question": f"\u8fd9\u9053\u9898\u4e3a\u4ec0\u4e48\u53ef\u4ee5\u6309 `{bundle.spec.entry_point or 'stdin/stdout'}` \u8fd9\u79cd\u8f93\u5165\u8f93\u51fa\u65b9\u5f0f\u5904\u7406\uff1f",
                 "answer": _annotation_explanation(annotation)
                 or "\u8fd9\u4efd\u4ee3\u7801\u6839\u636e\u9898\u9762\u7ea6\u675f\u5904\u7406\u8f93\u5165\uff0c\u518d\u8ba1\u7b97\u5e76\u8fd4\u56de\u6216\u8f93\u51fa\u7ed3\u679c\u3002",
+                "evidence": bundle.spec.entry_point or bundle.spec.io_mode,
             },
             {
                 "category": "complexity",
                 "question": "\u8fd9\u4e2a\u65f6\u95f4\u548c\u7a7a\u95f4\u590d\u6742\u5ea6\u662f\u600e\u4e48\u5224\u65ad\u7684\uff1f",
                 "answer": _complexity_answer(annotation, bundle),
+                "evidence": str(annotation.get("time_complexity") or _complexity_by_label(bundle, "time")),
             },
             {
                 "category": "variable_meaning",
@@ -155,6 +158,7 @@ class MockDialogueModel:
                     "\u9700\u8981\u628a\u53d8\u91cf\u548c\u9898\u9762\u4e2d\u7684\u8f93\u5165\u542b\u4e49\u3001\u72b6\u6001\u542b\u4e49\u6216\u8fd4\u56de\u503c\u8981\u6c42\u5bf9\u5e94\u8d77\u6765\uff0c"
                     "\u4e0d\u80fd\u53ea\u770b\u4ee3\u7801\u8868\u9762\u7684\u8d4b\u503c\u3002"
                 ),
+                "evidence": line_text.strip(),
             },
             {
                 "category": "debugging_strategy",
@@ -164,6 +168,7 @@ class MockDialogueModel:
                     "\u800c\u4e0d\u662f\u628a\u4ee3\u7801\u6539\u6210\u53ea\u5339\u914d\u6837\u4f8b\u3002"
                     "\u5e38\u89c1\u65b9\u5411\u5305\u62ec\u8fb9\u754c\u6761\u4ef6\u3001\u8d85\u65f6\u3001\u7cbe\u5ea6\u3001\u91cd\u590d\u503c\u548c\u8f93\u51fa\u683c\u5f0f\u3002"
                 ),
+                "evidence": line_text.strip(),
             },
         ]
         return json.dumps(items[: self.max_questions], ensure_ascii=False)
@@ -220,7 +225,7 @@ def _records_from_response(
     if not payloads:
         return [], [_failure(bundle, "parse_failed", raw, None)]
     for item in payloads[:max_questions]:
-        reason = _invalid_item_reason(item, code)
+        reason = _invalid_item_reason(item, code, _evidence_corpus(bundle, annotation, code))
         if reason:
             failures.append(_failure(bundle, reason, raw, item))
             continue
@@ -236,16 +241,18 @@ def _records_from_response(
     return records, failures
 
 
-def _invalid_item_reason(item: Any, code: str) -> str:
+def _invalid_item_reason(item: Any, code: str, evidence_corpus: str = "") -> str:
     if not isinstance(item, dict):
         return "item_not_object"
-    for key in ("question", "answer", "category"):
+    for key in ("question", "answer", "category", "evidence"):
         if not str(item.get(key) or "").strip():
             return f"missing_{key}"
     question = str(item["question"]).strip()
     answer = str(item["answer"]).strip()
     if not _has_chinese(question) or not _has_chinese(answer):
         return "non_chinese"
+    if not _evidence_supported(str(item["evidence"]), evidence_corpus):
+        return "unsupported_evidence"
     if _mentions_hidden_case(answer):
         return "hidden_case_leak"
     if str(item["category"]) == "line_explanation" and not _line_question_supported(question, answer, code):
@@ -261,7 +268,7 @@ def _generation_prompt(bundle: ProblemBundle, annotation: dict[str, Any], code: 
     )
     return (
         "Generate follow-up SFT data for the algorithm solution below. Output JSON array only, no Markdown.\n"
-        "Each item must contain: category, question, answer.\n"
+        "Each item must contain: category, question, answer, evidence.\n"
         f"Generate exactly {max_questions} diverse follow-up questions.\n"
         "Role-play as a student who is learning algorithm problem solving and has just read the solution.\n"
         "Questions must be naturally phrased and directly related to this specific statement or this specific code.\n"
@@ -270,6 +277,8 @@ def _generation_prompt(bundle: ProblemBundle, annotation: dict[str, Any], code: 
         "Avoid generic questions that could apply to any algorithm problem.\n"
         "All questions and answers must be Chinese.\n"
         "Answers must be grounded in the provided problem, annotation, and verified code.\n"
+        "Each evidence value must be an exact short substring copied from the statement, visible tests, annotation, or verified code.\n"
+        "Do not invent new concrete inputs. If asking about a sample, use only a visible test shown below.\n"
         "Do not reveal reward/eval/internal test inputs or expected outputs.\n"
         "For line_explanation, ask about a real line number and quote the real line content in the answer.\n"
         "For complexity, if complexity is unknown, explain uncertainty instead of inventing O(n).\n\n"
@@ -363,6 +372,31 @@ def _annotation_view(annotation: dict[str, Any], bundle: ProblemBundle) -> dict[
         "time_complexity": str(annotation.get("time_complexity") or _complexity_by_label(bundle, "time")),
         "space_complexity": str(annotation.get("space_complexity") or _complexity_by_label(bundle, "space")),
     }
+
+
+def _evidence_corpus(bundle: ProblemBundle, annotation: dict[str, Any], code: str) -> str:
+    visible = "\n".join(f"{case.stdin}\n{case.expected_stdout}" for case in bundle.tests.visible_tests[:2])
+    annotation_text = json.dumps(_annotation_view(annotation, bundle), ensure_ascii=False)
+    return "\n".join(
+        [
+            bundle.spec.title,
+            bundle.spec.statement,
+            bundle.spec.io_mode,
+            bundle.spec.entry_point,
+            visible,
+            annotation_text,
+            code,
+        ]
+    )
+
+
+def _evidence_supported(evidence: str, corpus: str) -> bool:
+    evidence = evidence.strip()
+    if not evidence:
+        return False
+    if evidence in {"unknown", "O(1)", "O(n)", "O(N)", "O(n log n)", "O(N log N)"}:
+        return True
+    return evidence in corpus
 
 
 def _annotation_explanation(annotation: dict[str, Any]) -> str:
