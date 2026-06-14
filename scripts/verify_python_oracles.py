@@ -73,7 +73,13 @@ def verify_bundle(
     reference = bundle.oracle.reference_solution
     attempts = []
     for solution in solutions[:max_solutions]:
-        result = executor.evaluate(solution.code, tests, default_timeout_sec=bundle.spec.time_limit_sec, suite_name="oracle")
+        result = executor.evaluate(
+            solution.code,
+            tests,
+            default_timeout_sec=bundle.spec.time_limit_sec,
+            suite_name="oracle",
+            entry_point=bundle.spec.entry_point if bundle.spec.io_mode == "callable" else "",
+        )
         is_verified = result.all_passed
         ok = ok or is_verified
         if is_verified and not reference:

@@ -24,9 +24,17 @@ class ProblemSpec:
     language: str = "python3"
     time_limit_sec: float = 2.0
     memory_limit_mb: int = 256
+    io_mode: str = "stdin"
+    entry_point: str = ""
 
     def prompt(self, include_visible_tests: list[TestCase] | None = None) -> str:
         constraints = "\n".join(f"- {item}" for item in self.constraints) or "- Not specified"
+        mode = (
+            f"Callable entry point: {self.entry_point}\n"
+            "Implement this function directly. Do not read from stdin unless the statement requires it.\n"
+            if self.io_mode == "callable" and self.entry_point
+            else ""
+        )
         visible = ""
         if include_visible_tests:
             blocks = []
@@ -43,7 +51,8 @@ class ProblemSpec:
             f"Constraints:\n{constraints}\n\n"
             f"Language: {self.language}\n"
             f"Time limit: {self.time_limit_sec:g} seconds\n"
-            f"Memory limit: {self.memory_limit_mb} MB"
+            f"Memory limit: {self.memory_limit_mb} MB\n"
+            f"{mode}"
             f"{visible}\n\n"
             "Return a Python 3 solution with Chinese explanation and structured complexity."
         )
@@ -162,6 +171,8 @@ def normalize_output(text: str | bytes | None) -> str:
         text = text.decode("utf-8", errors="replace")
     text = text.replace("\r\n", "\n").replace("\r", "\n")
     lines = [line.rstrip() for line in text.split("\n")]
+    while lines and lines[0] == "":
+        lines.pop(0)
     while lines and lines[-1] == "":
         lines.pop()
     return "\n".join(lines)
@@ -197,6 +208,8 @@ def problem_bundle_from_dict(payload: dict[str, Any]) -> ProblemBundle:
         language=spec_payload.get("language", "python3"),
         time_limit_sec=float(spec_payload.get("time_limit_sec", 2.0)),
         memory_limit_mb=int(spec_payload.get("memory_limit_mb", 256)),
+        io_mode=spec_payload.get("io_mode", "stdin"),
+        entry_point=spec_payload.get("entry_point", ""),
     )
     tests = TestSuite(
         visible_tests=_cases_from_dict(tests_payload.get("visible_tests", []), "visible"),
@@ -235,6 +248,8 @@ def problem_bundle_to_dict(bundle: ProblemBundle) -> dict[str, Any]:
             "language": bundle.spec.language,
             "time_limit_sec": bundle.spec.time_limit_sec,
             "memory_limit_mb": bundle.spec.memory_limit_mb,
+            "io_mode": bundle.spec.io_mode,
+            "entry_point": bundle.spec.entry_point,
         },
         "tests": {
             "visible_tests": [_case_to_dict(case) for case in bundle.tests.visible_tests],
@@ -292,4 +307,3 @@ def _flat_tags(raw: Any) -> list[str]:
             else:
                 tags.append(str(item))
     return list(dict.fromkeys(tag for tag in tags if tag))
-

@@ -28,6 +28,7 @@ class PythonExecutor:
         tests: list[TestCase],
         default_timeout_sec: float = 2.0,
         suite_name: str = "tests",
+        entry_point: str = "",
     ) -> ExecutionReport:
         with tempfile.TemporaryDirectory(prefix="algoagent_py_") as tmp:
             script = Path(tmp) / "main.py"
@@ -35,7 +36,13 @@ class PythonExecutor:
             syntax_error = self._syntax_error(script)
             if syntax_error:
                 return ExecutionReport(syntax_valid=False, syntax_error=syntax_error, runs=[])
-            runs = [self._run_one(script, case, default_timeout_sec, suite_name) for case in tests]
+            runner = Path(tmp) / "callable_runner.py"
+            if entry_point:
+                runner.write_text(_CALLABLE_RUNNER, encoding="utf-8")
+            runs = [
+                self._run_one(script, case, default_timeout_sec, suite_name, entry_point, runner)
+                for case in tests
+            ]
             return ExecutionReport(syntax_valid=True, runs=runs)
 
     def _syntax_error(self, script: Path) -> str:
@@ -51,11 +58,18 @@ class PythonExecutor:
         case: TestCase,
         default_timeout_sec: float,
         suite_name: str,
+        entry_point: str = "",
+        runner: Path | None = None,
     ) -> ExecutionRun:
         timeout = case.timeout_sec if case.timeout_sec is not None else default_timeout_sec
+        command = (
+            [self.python_bin, str(runner), str(script), entry_point]
+            if entry_point and runner is not None
+            else [self.python_bin, str(script)]
+        )
         try:
             completed = subprocess.run(
-                [self.python_bin, str(script)],
+                command,
                 input=case.stdin.encode("utf-8"),
                 capture_output=True,
                 text=False,
@@ -93,3 +107,32 @@ class PythonExecutor:
         if len(payload) <= limit:
             return payload, False
         return payload[:limit], True
+
+
+_CALLABLE_RUNNER = r"""
+import json
+import runpy
+import sys
+
+
+def main():
+    script = sys.argv[1]
+    entry_point = sys.argv[2]
+    namespace = runpy.run_path(script)
+    target = namespace.get(entry_point)
+    if target is None and "Solution" in namespace:
+        target = getattr(namespace["Solution"](), entry_point, None)
+    if target is None:
+        raise AttributeError(f"entry point not found: {entry_point}")
+
+    raw = sys.stdin.read().strip()
+    args = json.loads(raw) if raw else []
+    if not isinstance(args, list):
+        args = [args]
+    result = target(*args)
+    sys.stdout.write(json.dumps(result, ensure_ascii=False, sort_keys=True))
+
+
+if __name__ == "__main__":
+    main()
+"""

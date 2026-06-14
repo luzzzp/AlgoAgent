@@ -83,7 +83,7 @@ def convert_row(
     statement = str(row.get("statement") or row.get("question") or row.get("description") or "")
     if not statement:
         raise ValueError("missing_statement")
-    inputs, outputs = _extract_tests(row)
+    inputs, outputs, io_mode, entry_point = _extract_tests(row)
     if not inputs or len(inputs) != len(outputs):
         raise ValueError("missing_or_mismatched_tests")
     cases = [TestCase(stdin=i, expected_stdout=o) for i, o in zip(inputs, outputs)]
@@ -109,6 +109,8 @@ def convert_row(
         language="python3",
         time_limit_sec=_parse_time_limit(row.get("time_limit_sec") or row.get("time_limit") or 2.0),
         memory_limit_mb=_parse_memory_limit(row.get("memory_limit_mb") or row.get("memory_limit") or 256),
+        io_mode=io_mode,
+        entry_point=entry_point,
     )
     return ProblemBundle(
         spec=spec,
@@ -124,7 +126,7 @@ def convert_row(
     )
 
 
-def _extract_tests(row: dict[str, Any]) -> tuple[list[str], list[str]]:
+def _extract_tests(row: dict[str, Any]) -> tuple[list[str], list[str], str, str]:
     io = row.get("input_output")
     if isinstance(io, str):
         try:
@@ -132,8 +134,16 @@ def _extract_tests(row: dict[str, Any]) -> tuple[list[str], list[str]]:
         except json.JSONDecodeError:
             io = {}
     if isinstance(io, dict):
-        return _as_test_cases(io.get("inputs")), _as_test_cases(io.get("outputs"))
-    return _as_test_cases(row.get("inputs")), _as_test_cases(row.get("outputs"))
+        entry_point = str(io.get("fn_name") or "").strip()
+        if entry_point:
+            return (
+                _as_callable_cases(io.get("inputs")),
+                _as_callable_cases(io.get("outputs")),
+                "callable",
+                entry_point,
+            )
+        return _as_test_cases(io.get("inputs")), _as_test_cases(io.get("outputs")), "stdin", ""
+    return _as_test_cases(row.get("inputs")), _as_test_cases(row.get("outputs")), "stdin", ""
 
 
 def _extract_python_solutions(row: dict[str, Any]) -> list[str]:
@@ -187,6 +197,24 @@ def _case_text(value: Any) -> str:
     if isinstance(value, list):
         return "\n".join(_case_text(item) for item in value)
     return str(value)
+
+
+def _as_callable_cases(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, str):
+        try:
+            decoded = json.loads(value)
+        except json.JSONDecodeError:
+            decoded = value
+        value = decoded
+    if isinstance(value, list):
+        return [_json_case_text(item) for item in value]
+    return [_json_case_text(value)]
+
+
+def _json_case_text(value: Any) -> str:
+    return json.dumps(value, ensure_ascii=False, sort_keys=True)
 
 
 def _parse_time_limit(value: Any) -> float:

@@ -39,6 +39,7 @@ class PythonAlgoAgent:
                 tests.visible_tests,
                 default_timeout_sec=problem.time_limit_sec,
                 suite_name="visible",
+                entry_point=problem.entry_point if problem.io_mode == "callable" else "",
             )
             record = AttemptRecord(turn=turn, code=response.code, visible_result=visible_result)
             records.append(record)
@@ -67,6 +68,7 @@ class PythonAlgoAgent:
                 tests.eval_tests,
                 default_timeout_sec=problem.time_limit_sec,
                 suite_name="eval",
+                entry_point=problem.entry_point if problem.io_mode == "callable" else "",
             )
             records[-1] = AttemptRecord(
                 turn=turn,
@@ -162,4 +164,3 @@ def _failure_reason(records: list[AttemptRecord]) -> str:
 
 def _numbered(code: str) -> str:
     return "\n".join(f"{idx}: {line}" for idx, line in enumerate(code.splitlines(), start=1))
-

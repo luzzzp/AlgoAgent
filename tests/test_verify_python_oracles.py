@@ -46,7 +46,30 @@ class VerifyPythonOracleTest(unittest.TestCase):
         self.assertEqual(detail["attempts"][0]["first_failed"]["actual"], "-1")
         self.assertFalse(updated.oracle.solutions[0].verified)
 
+    def test_callable_solution_can_be_verified(self) -> None:
+        bundle = ProblemBundle(
+            spec=ProblemSpec(
+                id="callable",
+                title="Callable",
+                statement="Return sum.",
+                io_mode="callable",
+                entry_point="add",
+            ),
+            tests=TestSuite(visible_tests=[TestCase("[2, 3]", "5")]),
+            oracle=OracleMetadata(solutions=[OracleSolution("python3", "def add(a, b):\n    return a + b\n")]),
+        )
+
+        updated, ok, has_solution, detail = verify_python_oracles.verify_bundle(
+            bundle,
+            PythonExecutor(),
+            max_solutions=1,
+        )
+
+        self.assertTrue(ok)
+        self.assertTrue(has_solution)
+        self.assertIsNone(detail)
+        self.assertTrue(updated.oracle.solutions[0].verified)
+
 
 if __name__ == "__main__":
     unittest.main()
-

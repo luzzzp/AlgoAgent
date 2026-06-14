@@ -35,12 +35,14 @@ def score_completion(
         bundle.tests.visible_tests,
         default_timeout_sec=bundle.spec.time_limit_sec,
         suite_name="visible",
+        entry_point=bundle.spec.entry_point if bundle.spec.io_mode == "callable" else "",
     )
     reward_result = executor.evaluate(
         code,
         bundle.tests.reward_tests,
         default_timeout_sec=bundle.spec.time_limit_sec,
         suite_name="reward",
+        entry_point=bundle.spec.entry_point if bundle.spec.io_mode == "callable" else "",
     )
     return compute_reward(text, code, visible_result, reward_result)
 
@@ -146,4 +148,3 @@ def _has_truncated_output(report: ExecutionReport) -> bool:
 
 def _looks_like_sample_hardcode(code: str) -> bool:
     return code.count("input()") == 0 and code.count("print(") >= 3
-

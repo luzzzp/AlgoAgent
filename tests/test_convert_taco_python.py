@@ -43,10 +43,28 @@ class ConvertTacoPythonTest(unittest.TestCase):
             }
         }
 
-        inputs, outputs = convert_taco_python._extract_tests(row)
+        inputs, outputs, io_mode, entry_point = convert_taco_python._extract_tests(row)
 
         self.assertEqual(inputs, ["1\n5 10", "7\n8"])
         self.assertEqual(outputs, ["50", "15"])
+        self.assertEqual(io_mode, "stdin")
+        self.assertEqual(entry_point, "")
+
+    def test_callable_tests_are_serialized_as_json_arguments(self) -> None:
+        row = {
+            "input_output": {
+                "fn_name": "twoSum",
+                "inputs": [[[2, 7, 11, 15], 9]],
+                "outputs": [[0, 1]],
+            }
+        }
+
+        inputs, outputs, io_mode, entry_point = convert_taco_python._extract_tests(row)
+
+        self.assertEqual(inputs, ["[[2, 7, 11, 15], 9]"])
+        self.assertEqual(outputs, ["[0, 1]"])
+        self.assertEqual(io_mode, "callable")
+        self.assertEqual(entry_point, "twoSum")
 
 
 if __name__ == "__main__":

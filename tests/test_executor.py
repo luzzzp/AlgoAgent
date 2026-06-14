@@ -54,7 +54,32 @@ class PythonExecutorTest(unittest.TestCase):
         self.assertTrue(result.runs[0].output_truncated)
         self.assertFalse(result.runs[0].passed)
 
+    def test_ignores_outer_blank_lines(self) -> None:
+        result = PythonExecutor().evaluate(
+            "print('4 3 2 1')\n",
+            [TestCase("", "\n4 3 2 1\n", id="visible-1")],
+        )
+
+        self.assertTrue(result.all_passed)
+
+    def test_callable_entry_point(self) -> None:
+        result = PythonExecutor().evaluate(
+            "def add(a, b):\n    return a + b\n",
+            [TestCase("[2, 3]", "5", id="visible-1")],
+            entry_point="add",
+        )
+
+        self.assertTrue(result.all_passed)
+
+    def test_callable_solution_class_entry_point(self) -> None:
+        result = PythonExecutor().evaluate(
+            "class Solution:\n    def add(self, a, b):\n        return a + b\n",
+            [TestCase("[2, 3]", "5", id="visible-1")],
+            entry_point="add",
+        )
+
+        self.assertTrue(result.all_passed)
+
 
 if __name__ == "__main__":
     unittest.main()
-
