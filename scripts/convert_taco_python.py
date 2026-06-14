@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import re
 import sys
 from typing import Any
 
@@ -106,8 +107,8 @@ def convert_row(
         output_format=str(row.get("output_format") or ""),
         constraints=_as_list(row.get("constraints")),
         language="python3",
-        time_limit_sec=float(row.get("time_limit_sec") or row.get("time_limit") or 2.0),
-        memory_limit_mb=int(row.get("memory_limit_mb") or row.get("memory_limit") or 256),
+        time_limit_sec=_parse_time_limit(row.get("time_limit_sec") or row.get("time_limit") or 2.0),
+        memory_limit_mb=_parse_memory_limit(row.get("memory_limit_mb") or row.get("memory_limit") or 256),
     )
     return ProblemBundle(
         spec=spec,
@@ -162,6 +163,31 @@ def _as_list(value: Any) -> list[str]:
             pass
         return [value]
     return [str(value)]
+
+
+def _parse_time_limit(value: Any) -> float:
+    if isinstance(value, (int, float)):
+        return float(value)
+    text = str(value).strip().lower()
+    match = re.search(r"(\d+(?:\.\d+)?)", text)
+    if not match:
+        return 2.0
+    return float(match.group(1))
+
+
+def _parse_memory_limit(value: Any) -> int:
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    text = str(value).strip().lower()
+    match = re.search(r"(\d+(?:\.\d+)?)", text)
+    if not match:
+        return 256
+    amount = float(match.group(1))
+    if "gb" in text or "gib" in text:
+        return int(amount * 1024)
+    return int(amount)
 
 
 def _safe_id(index: int, title: str) -> str:

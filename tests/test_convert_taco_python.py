@@ -29,7 +29,12 @@ class ConvertTacoPythonTest(unittest.TestCase):
         self.assertIn("input_output", record["keys"])
         self.assertIn("\\n", record["statement_preview"])
 
+    def test_parses_human_readable_limits(self) -> None:
+        self.assertEqual(convert_taco_python._parse_time_limit("1.0 seconds"), 1.0)
+        self.assertEqual(convert_taco_python._parse_time_limit("0.5 seconds"), 0.5)
+        self.assertEqual(convert_taco_python._parse_memory_limit("256 megabytes"), 256)
+        self.assertEqual(convert_taco_python._parse_memory_limit("1 GB"), 1024)
+
 
 if __name__ == "__main__":
     unittest.main()
-
