@@ -278,7 +278,7 @@ def _generation_prompt(bundle: ProblemBundle, annotation: dict[str, Any], code: 
     return (
         "Generate follow-up SFT data for the algorithm solution below. Output JSON array only, no Markdown.\n"
         "Each item must contain: category, question, answer, evidence_id.\n"
-        "Use evidence_id exactly as one of the Evidence IDs listed below. Do not create new evidence IDs.\n"
+        "Use evidence_id exactly as one of the Evidence IDs listed below. Do not create or infer new evidence IDs.\n"
         f"Generate exactly {max_questions} diverse follow-up questions.\n"
         "Role-play as a student who is learning algorithm problem solving and has just read the solution.\n"
         "Questions must be naturally phrased and directly related to this specific statement or this specific code.\n"
@@ -289,7 +289,7 @@ def _generation_prompt(bundle: ProblemBundle, annotation: dict[str, Any], code: 
         "Answers must be grounded in the provided problem, annotation, and verified code.\n"
         "Do not invent new concrete inputs. If asking about a sample, use only a visible test shown below.\n"
         "Do not reveal reward/eval/internal test inputs or expected outputs.\n"
-        "For line_explanation, ask about a real line number and quote the real line content in the answer.\n"
+        "For line_explanation, use a code evidence_id such as C12 and quote that exact code line in the answer.\n"
         "For complexity, if complexity is unknown, explain uncertainty instead of inventing O(n).\n\n"
         f"Title: {bundle.spec.title}\n"
         f"Statement:\n{_clip(bundle.spec.statement, 3500)}\n\n"
@@ -403,14 +403,12 @@ def _evidence_items(bundle: ProblemBundle, annotation: dict[str, Any], code: str
                 "text": _clip_one_line(f"Input: {case.stdin} Expected: {case.expected_stdout}", 180),
             }
         )
-    code_index = 1
     for line_no, line in enumerate(code.splitlines(), start=1):
         stripped = line.strip()
         if not stripped or stripped.startswith("#"):
             continue
-        items.append({"id": f"C{code_index}", "source": "code", "line": line_no, "text": stripped})
-        code_index += 1
-        if code_index > 24:
+        items.append({"id": f"C{line_no}", "source": "code", "line": line_no, "text": stripped})
+        if len([item for item in items if item["source"] == "code"]) >= 80:
             break
     return items
 

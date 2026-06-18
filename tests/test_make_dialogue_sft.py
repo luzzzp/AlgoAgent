@@ -156,6 +156,17 @@ class MakeDialogueSftTest(unittest.TestCase):
         self.assertIn("Use evidence_id exactly as one of the Evidence IDs", prompt)
         self.assertIn("Do not invent new concrete inputs", prompt)
 
+    def test_code_evidence_ids_use_real_line_numbers(self) -> None:
+        code = "\n".join(f"x{i} = {i}" for i in range(1, 35))
+        bundle = _bundle()
+
+        items = make_dialogue_sft._evidence_items(bundle, {}, code)
+        evidence_ids = {item["id"] for item in items}
+
+        self.assertIn("C1", evidence_ids)
+        self.assertIn("C25", evidence_ids)
+        self.assertIn("C34", evidence_ids)
+
     def test_normalized_line_answer_adds_code_quote(self) -> None:
         answer = make_dialogue_sft._normalized_answer(
             "第 2 行用于返回两个数的和。",
