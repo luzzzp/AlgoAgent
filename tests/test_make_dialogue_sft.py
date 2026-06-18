@@ -55,10 +55,24 @@ class MakeDialogueSftTest(unittest.TestCase):
         self.assertIn("output", records[0])
         self.assertTrue(records[0]["input"].startswith("Task Type: ANSWER_FOLLOW_UP\n"))
         self.assertIn("Interaction: User follow-up after verified solution", records[0]["input"])
-        self.assertIn("Problem ID: p1", records[0]["input"])
+        self.assertNotIn("Problem ID:", records[0]["input"])
+        self.assertNotIn("Title:", records[0]["input"])
+        self.assertIn("Problem statement:", records[0]["input"])
         self.assertIn("Verified solution with line numbers", records[0]["input"])
         self.assertIn("User follow-up:", records[0]["input"])
         self.assertRegex(records[0]["output"], r"[\u4e00-\u9fff]")
+
+    def test_loaded_problem_ids_use_sidecar_without_training_input_id(self) -> None:
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            out_path = Path(tmp) / "followup_sft.jsonl"
+            make_dialogue_sft._done_ids_path(out_path).write_text(
+                '{"problem_id":"p1"}\n{"problem_id":"p2"}\n',
+                encoding="utf-8",
+            )
+
+            self.assertEqual(make_dialogue_sft._loaded_problem_ids(out_path), {"p1", "p2"})
 
     def test_extract_json_array_from_markdown_response(self) -> None:
         raw = '```json\n[{"category":"algorithm_idea","question":"思路是什么？","answer":"直接相加。","evidence_id":"C2"}]\n```'
@@ -158,6 +172,7 @@ class MakeDialogueSftTest(unittest.TestCase):
         self.assertIn("category, question, answer, evidence_id", prompt)
         self.assertIn("Use evidence_id exactly as one of the Evidence IDs", prompt)
         self.assertIn("Do not invent new concrete inputs", prompt)
+        self.assertNotIn("Title:", prompt)
 
     def test_code_evidence_ids_use_real_line_numbers(self) -> None:
         code = "\n".join(f"x{i} = {i}" for i in range(1, 35))

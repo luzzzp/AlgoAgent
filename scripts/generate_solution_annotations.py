@@ -128,7 +128,6 @@ def _annotation_prompt(bundle: ProblemBundle, code: str) -> str:
         "solution_explanation 必须是中文，2-5 句话，要结合题意和代码思路，不要写空泛模板。\n"
         "time_complexity / space_complexity 尽量根据代码主循环、递归、排序、DP 状态和题目约束估计，格式优先用 O(...)；"
         "如果无法可靠判断，才写 unknown。\n\n"
-        f"Title: {bundle.spec.title}\n"
         f"Statement:\n{_clip(bundle.spec.statement, 3500)}\n\n"
         f"IO mode: {bundle.spec.io_mode}\n"
         f"Entry point: {bundle.spec.entry_point or 'stdin/stdout'}\n"

@@ -47,6 +47,19 @@ class GenerateSolutionAnnotationsTest(unittest.TestCase):
         self.assertFalse(record["valid"])
         self.assertIn("`solve`", record["solution_explanation"])
 
+    def test_annotation_prompt_does_not_include_title(self) -> None:
+        bundle = ProblemBundle(
+            spec=ProblemSpec(id="p", title="Misleading Title", statement="Solve it."),
+            tests=TestSuite(),
+            oracle=OracleMetadata(solutions=[OracleSolution("python3", "print(1)", True)]),
+        )
+
+        prompt = generate_solution_annotations._annotation_prompt(bundle, "print(1)")
+
+        self.assertNotIn("Title:", prompt)
+        self.assertNotIn("Misleading Title", prompt)
+        self.assertIn("Statement:", prompt)
+
 
 if __name__ == "__main__":
     unittest.main()

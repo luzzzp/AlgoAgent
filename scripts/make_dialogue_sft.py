@@ -46,6 +46,8 @@ SUGGESTED_QUESTION_TYPES = [
     "debugging_strategy",
 ]
 
+DONE_IDS_FILENAME = "_done_problem_ids.jsonl"
+
 
 class DialogueModel(Protocol):
     def generate_dialogue(self, bundle: ProblemBundle, annotation: dict[str, Any], code: str) -> str:
@@ -82,7 +84,10 @@ def main() -> None:
     skipped = 0
     mode = "a" if args.resume else "w"
     failed_mode = "a" if args.resume else "w"
-    with out_path.open(mode, encoding="utf-8") as output, failed_path.open(failed_mode, encoding="utf-8") as failures:
+    done_mode = "a" if args.resume else "w"
+    with out_path.open(mode, encoding="utf-8") as output, \
+        failed_path.open(failed_mode, encoding="utf-8") as failures, \
+        _done_ids_path(out_path).open(done_mode, encoding="utf-8") as done_ids:
         for bundle in bundles:
             if bundle.spec.id in done:
                 skipped += 1
@@ -106,8 +111,10 @@ def main() -> None:
             for failure_record in failure_records:
                 failures.write(json.dumps(failure_record, ensure_ascii=False) + "\n")
                 failed += 1
+            done_ids.write(json.dumps({"problem_id": bundle.spec.id}, ensure_ascii=False) + "\n")
             output.flush()
             failures.flush()
+            done_ids.flush()
 
     report = {
         "stage": "make_dialogue_sft",
@@ -296,7 +303,6 @@ def _generation_prompt(bundle: ProblemBundle, annotation: dict[str, Any], code: 
         "Do not reveal reward/eval/internal test inputs or expected outputs.\n"
         "For line_explanation, use a code evidence_id such as C12 and quote that exact code line in the answer.\n"
         "For complexity, if complexity is unknown, explain uncertainty instead of inventing O(n).\n\n"
-        f"Title: {bundle.spec.title}\n"
         f"Statement:\n{_clip(bundle.spec.statement, 3500)}\n\n"
         f"IO mode: {bundle.spec.io_mode}\n"
         f"Entry point: {bundle.spec.entry_point or 'stdin/stdout'}\n"
@@ -309,8 +315,6 @@ def _generation_prompt(bundle: ProblemBundle, annotation: dict[str, Any], code: 
 
 def _context(bundle: ProblemBundle, annotation: dict[str, Any], code: str) -> str:
     return FOLLOWUP_TASK_HEADER + (
-        f"Problem ID: {bundle.spec.id}\n"
-        f"Title: {bundle.spec.title}\n\n"
         f"Problem statement:\n{bundle.spec.statement}\n\n"
         f"IO mode: {bundle.spec.io_mode}\n"
         f"Entry point: {bundle.spec.entry_point or 'stdin/stdout'}\n"
@@ -353,28 +357,43 @@ def _load_annotations(path: str) -> dict[str, dict[str, Any]]:
 
 
 def _loaded_problem_ids(path: Path) -> set[str]:
-    if not path.exists():
-        return set()
+    done_path = _done_ids_path(path)
     ids = set()
-    with path.open(encoding="utf-8") as handle:
-        for line in handle:
-            if not line.strip():
-                continue
-            try:
-                payload = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            text = str(payload.get("input") or "")
-            match = re.search(r"Problem ID:\s*(.*?)\n", text)
-            if match:
-                ids.add(match.group(1).strip())
+    if done_path.exists():
+        with done_path.open(encoding="utf-8") as handle:
+            for line in handle:
+                if not line.strip():
+                    continue
+                try:
+                    payload = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if payload.get("problem_id"):
+                    ids.add(str(payload["problem_id"]))
+        return ids
+    if path.exists():
+        with path.open(encoding="utf-8") as handle:
+            for line in handle:
+                if not line.strip():
+                    continue
+                try:
+                    payload = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                text = str(payload.get("input") or "")
+                match = re.search(r"Problem ID:\s*(.*?)\n", text)
+                if match:
+                    ids.add(match.group(1).strip())
     return ids
+
+
+def _done_ids_path(path: Path) -> Path:
+    return path.with_name(DONE_IDS_FILENAME)
 
 
 def _failure(bundle: ProblemBundle, reason: str, raw: str, item: Any) -> dict[str, Any]:
     return {
         "problem_id": bundle.spec.id,
-        "title": bundle.spec.title,
         "reason": reason,
         "item": item,
         "raw_response": raw[:2000],

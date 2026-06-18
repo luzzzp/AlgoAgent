@@ -44,7 +44,6 @@ class ProblemSpec:
                 )
             visible = "\n\nVisible samples:\n" + "\n\n".join(blocks)
         return (
-            f"Title: {self.title}\n\n"
             f"{self.statement}\n\n"
             f"Input format:\n{self.input_format}\n\n"
             f"Output format:\n{self.output_format}\n\n"

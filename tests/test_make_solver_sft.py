@@ -49,7 +49,8 @@ class MakeSolverSftTest(unittest.TestCase):
         self.assertEqual(set(record), {"instruction", "input", "output"})
         self.assertTrue(record["input"].startswith("Task Type: SOLVE_PROBLEM\n"))
         self.assertIn("Interaction: Initial solution generation", record["input"])
-        self.assertIn("Title: P", record["input"])
+        self.assertNotIn("Title:", record["input"])
+        self.assertIn("Solve it.", record["input"])
 
     def test_callable_answer_mentions_entry_point(self) -> None:
         bundle = ProblemBundle(
