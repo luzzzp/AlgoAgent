@@ -20,6 +20,11 @@ FOLLOWUP_INSTRUCTION = (
     "Do not invent a new algorithm or modify code unless the user explicitly asks to restart solving."
 )
 
+FOLLOWUP_TASK_HEADER = (
+    "Task Type: ANSWER_FOLLOW_UP\n"
+    "Interaction: User follow-up after verified solution\n\n"
+)
+
 SYSTEM_PROMPT = (
     "\u4f60\u662f\u7b97\u6cd5\u9898\u89e3\u5bf9\u8bdd\u6570\u636e\u6807\u6ce8\u5458\u3002"
     "\u4f60\u53ea\u80fd\u57fa\u4e8e\u9898\u9762\u3001\u5df2\u9a8c\u8bc1\u4ee3\u7801\u3001"
@@ -303,7 +308,7 @@ def _generation_prompt(bundle: ProblemBundle, annotation: dict[str, Any], code: 
 
 
 def _context(bundle: ProblemBundle, annotation: dict[str, Any], code: str) -> str:
-    return (
+    return FOLLOWUP_TASK_HEADER + (
         f"Problem ID: {bundle.spec.id}\n"
         f"Title: {bundle.spec.title}\n\n"
         f"Problem statement:\n{bundle.spec.statement}\n\n"

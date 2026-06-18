@@ -3,11 +3,11 @@ from __future__ import annotations
 import argparse
 import inspect
 
-from algoagent.hf_model import SOLVER_SYSTEM_PROMPT
+from algoagent.hf_model import SFT_SYSTEM_PROMPT
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="QLoRA SFT for AlgoAgent-Py solver data.")
+    parser = argparse.ArgumentParser(description="QLoRA SFT for AlgoAgent data.")
     parser.add_argument("--model", default="Qwen/Qwen2.5-Coder-7B-Instruct")
     parser.add_argument("--dataset", default="data/processed/solver_sft.jsonl")
     parser.add_argument("--output-dir", default="outputs/solver-sft")
@@ -53,7 +53,7 @@ def main() -> None:
 
 def _format(row: dict[str, str]) -> str:
     return (
-        f"<|im_start|>system\n{SOLVER_SYSTEM_PROMPT}<|im_end|>\n"
+        f"<|im_start|>system\n{SFT_SYSTEM_PROMPT}<|im_end|>\n"
         f"<|im_start|>user\n{row['instruction']}\n{row['input']}<|im_end|>\n"
         f"<|im_start|>assistant\n{row['output']}<|im_end|>"
     )
@@ -91,4 +91,3 @@ def _trainer_kwargs(SFTTrainer, model, args, dataset, tokenizer, peft_config):
 
 if __name__ == "__main__":
     main()
-

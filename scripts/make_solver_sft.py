@@ -13,6 +13,12 @@ if str(ROOT) not in sys.path:
 from algoagent.schema import ProblemBundle, load_problems
 
 
+SOLVER_TASK_HEADER = (
+    "Task Type: SOLVE_PROBLEM\n"
+    "Interaction: Initial solution generation\n\n"
+)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Build Solver SFT data for AlgoAgent.")
     parser.add_argument("--problems", required=True)
@@ -45,7 +51,7 @@ def _record(bundle: ProblemBundle, annotation: dict | None = None) -> dict[str, 
             "The Solution Explanation must be Chinese. "
             "Use exact sections: Solution Explanation, Time Complexity, Space Complexity, and a python code block."
         ),
-        "input": bundle.spec.prompt(bundle.tests.visible_tests),
+        "input": SOLVER_TASK_HEADER + bundle.spec.prompt(bundle.tests.visible_tests),
         "output": _answer(bundle, annotation),
     }
 

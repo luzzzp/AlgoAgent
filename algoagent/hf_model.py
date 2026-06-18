@@ -7,12 +7,19 @@ from algoagent.schema import ProblemSpec
 
 
 SOLVER_SYSTEM_PROMPT = (
-    "You are AlgoAgent-Py, a Python competitive programming assistant. "
+    "You are AlgoAgent, a Python competitive programming assistant. "
     "Answer with Chinese Solution Explanation, time/space complexity, and Python 3 code."
 )
 
+SFT_SYSTEM_PROMPT = (
+    "You are AlgoAgent, a Python algorithm problem assistant. "
+    "Read the Task Type in the user message before answering. "
+    "For SOLVE_PROBLEM, output Chinese Solution Explanation, time/space complexity, and Python 3 code. "
+    "For ANSWER_FOLLOW_UP, answer the user's follow-up question in Chinese using only the provided verified solution context."
+)
+
 FOLLOWUP_SYSTEM_PROMPT = (
-    "You are AlgoAgent-Py. Answer follow-up questions only from the verified solution context. "
+    "You are AlgoAgent. Answer follow-up questions only from the verified solution context. "
     "Do not modify code unless the solve-and-verify workflow is restarted."
 )
 
@@ -122,4 +129,3 @@ def _extract_explanation(text: str) -> str:
 def _extract_complexity(text: str, kind: str) -> str:
     match = re.search(rf"{kind}\s+complexity\s*:\s*(O\s*\([^)]+\)|unknown)", text, re.I)
     return match.group(1) if match else "unknown"
-

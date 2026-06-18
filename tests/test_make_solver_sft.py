@@ -37,6 +37,20 @@ class MakeSolverSftTest(unittest.TestCase):
         self.assertIn("Time Complexity: O(1)", answer)
         self.assertIn("```python", answer)
 
+    def test_record_marks_solver_task_type(self) -> None:
+        bundle = ProblemBundle(
+            spec=ProblemSpec(id="p", title="P", statement="Solve it."),
+            tests=TestSuite(visible_tests=[TestCase("1\n", "1\n")]),
+            oracle=OracleMetadata(solutions=[OracleSolution("python3", "print(input())", True)]),
+        )
+
+        record = make_solver_sft._record(bundle)
+
+        self.assertEqual(set(record), {"instruction", "input", "output"})
+        self.assertTrue(record["input"].startswith("Task Type: SOLVE_PROBLEM\n"))
+        self.assertIn("Interaction: Initial solution generation", record["input"])
+        self.assertIn("Title: P", record["input"])
+
     def test_callable_answer_mentions_entry_point(self) -> None:
         bundle = ProblemBundle(
             spec=ProblemSpec(

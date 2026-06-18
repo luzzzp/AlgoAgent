@@ -53,8 +53,11 @@ class MakeDialogueSftTest(unittest.TestCase):
         self.assertIn("instruction", records[0])
         self.assertIn("input", records[0])
         self.assertIn("output", records[0])
+        self.assertTrue(records[0]["input"].startswith("Task Type: ANSWER_FOLLOW_UP\n"))
+        self.assertIn("Interaction: User follow-up after verified solution", records[0]["input"])
         self.assertIn("Problem ID: p1", records[0]["input"])
         self.assertIn("Verified solution with line numbers", records[0]["input"])
+        self.assertIn("User follow-up:", records[0]["input"])
         self.assertRegex(records[0]["output"], r"[\u4e00-\u9fff]")
 
     def test_extract_json_array_from_markdown_response(self) -> None:
