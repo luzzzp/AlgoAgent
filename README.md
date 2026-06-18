@@ -24,8 +24,8 @@ python -m unittest discover -s tests -v
 Solver SFT uses one record per verified problem. The full problem statement is stored in the `input`
 field, while the `output` field contains the Chinese explanation, complexity, and verified Python code.
 Follow-up SFT uses multiple records per verified problem and asks an LLM to generate diverse student-style
-questions grounded in the statement and code. Each generated follow-up item must include evidence copied
-from the provided context; unsupported or hidden-test-leaking items are filtered out.
+questions grounded in the statement and code. Each generated follow-up item must choose an `evidence_id`
+from provided statement/code/annotation snippets; unsupported or hidden-test-leaking items are filtered out.
 
 ```bash
 python scripts/convert_taco_python.py \

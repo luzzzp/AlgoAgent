@@ -58,7 +58,7 @@ class MakeDialogueSftTest(unittest.TestCase):
         self.assertRegex(records[0]["output"], r"[\u4e00-\u9fff]")
 
     def test_extract_json_array_from_markdown_response(self) -> None:
-        raw = '```json\n[{"category":"algorithm_idea","question":"思路是什么？","answer":"直接相加。","evidence":"return a + b"}]\n```'
+        raw = '```json\n[{"category":"algorithm_idea","question":"思路是什么？","answer":"直接相加。","evidence_id":"C2"}]\n```'
 
         payload = make_dialogue_sft._extract_json_array(raw)
 
@@ -66,18 +66,18 @@ class MakeDialogueSftTest(unittest.TestCase):
 
     def test_invalid_non_chinese_item_is_rejected(self) -> None:
         reason = make_dialogue_sft._invalid_item_reason(
-            {"category": "algorithm_idea", "question": "What?", "answer": "Use sum.", "evidence": "return a + b"},
+            {"category": "algorithm_idea", "question": "What?", "answer": "Use sum.", "evidence_id": "C2"},
             CODE,
-            CODE,
+            {"C2": {"source": "code", "text": "return a + b"}},
         )
 
         self.assertEqual(reason, "non_chinese")
 
     def test_invalid_missing_field_is_rejected(self) -> None:
         reason = make_dialogue_sft._invalid_item_reason(
-            {"category": "algorithm_idea", "question": "思路是什么？", "evidence": "return a + b"},
+            {"category": "algorithm_idea", "question": "思路是什么？", "evidence_id": "C2"},
             CODE,
-            CODE,
+            {"C2": {"source": "code", "text": "return a + b"}},
         )
 
         self.assertEqual(reason, "missing_answer")
@@ -88,10 +88,10 @@ class MakeDialogueSftTest(unittest.TestCase):
                 "category": "hidden_failure_analysis",
                 "question": "隐藏测试失败怎么办？",
                 "answer": "可以查看 eval-0001 的 expected output is 5。",
-                "evidence": "return a + b",
+                "evidence_id": "C2",
             },
             CODE,
-            CODE,
+            {"C2": {"source": "code", "text": "return a + b"}},
         )
 
         self.assertEqual(reason, "hidden_case_leak")
@@ -102,10 +102,10 @@ class MakeDialogueSftTest(unittest.TestCase):
                 "category": "line_explanation",
                 "question": "第 2 行是什么意思？",
                 "answer": "第 2 行用于返回结果。",
-                "evidence": "return a + b",
+                "evidence_id": "X1",
             },
             CODE,
-            CODE,
+            {"X1": {"source": "complexity", "text": "Time Complexity: O(1)"}},
         )
 
         self.assertEqual(reason, "line_reference_missing")
@@ -116,10 +116,10 @@ class MakeDialogueSftTest(unittest.TestCase):
                 "category": "complexity",
                 "question": "复杂度是什么？",
                 "answer": "虽然复杂度 unknown，但可以认为是 O(n)。",
-                "evidence": "unknown",
+                "evidence_id": "X1",
             },
             CODE,
-            CODE,
+            {"X1": {"source": "complexity", "text": "Time Complexity: unknown"}},
         )
 
         self.assertEqual(reason, "fabricated_unknown_complexity")
@@ -130,10 +130,10 @@ class MakeDialogueSftTest(unittest.TestCase):
                 "category": "algorithm_idea",
                 "question": "这段代码为什么这样写？",
                 "answer": "因为它直接返回两个数的和。",
-                "evidence": "not in context",
+                "evidence_id": "NOPE",
             },
             CODE,
-            CODE,
+            {"C2": {"source": "code", "text": "return a + b"}},
         )
 
         self.assertEqual(reason, "unsupported_evidence")
@@ -152,8 +152,18 @@ class MakeDialogueSftTest(unittest.TestCase):
         self.assertIn("Role-play as a student", prompt)
         self.assertIn("specific statement or this specific code", prompt)
         self.assertIn("do not mechanically cover them in a fixed order", prompt)
-        self.assertIn("category, question, answer, evidence", prompt)
+        self.assertIn("category, question, answer, evidence_id", prompt)
+        self.assertIn("Use evidence_id exactly as one of the Evidence IDs", prompt)
         self.assertIn("Do not invent new concrete inputs", prompt)
+
+    def test_normalized_line_answer_adds_code_quote(self) -> None:
+        answer = make_dialogue_sft._normalized_answer(
+            "第 2 行用于返回两个数的和。",
+            {"category": "line_explanation", "evidence_id": "C2"},
+            {"C2": {"source": "code", "text": "return a + b"}},
+        )
+
+        self.assertIn("`return a + b`", answer)
 
 
 if __name__ == "__main__":
